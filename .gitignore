@@ -1,0 +1,32 @@
+# === PYTHON ===
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# === IDE & РЕДАКТОРЫ ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# === ПРОЕКТНЫЕ ФАЙЛЫ ===
+backend/uploads/          # Папка с загруженными файлами и сгенерированными картинками (тяжёлая, не нужна в git)
+backend/variants_db.json  # База данных вариантов (создаётся автоматически при работе сервера)
+*.log
+.env                      # Секретные ключи и настройки окружения
+
+# === ОС ===
+.DS_Store                 # macOS
+desktop.ini               # Windows
