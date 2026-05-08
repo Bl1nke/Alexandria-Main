@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Alexandria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <meta name="description" content="Краткое описание страницы для SEO">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="bg-gradient-overlay">
+            <div class="content-wrapper">
+                <div class="cards-section">
+                    <div class="card-left">
+                        <h2 class="za">Ваши варианты</h2>
+                        <div class="card-list-placeholder">
+                            <div class="list-item-placeholder"></div>
+                            <div class="list-item-placeholder"></div>
+                            <div class="list-item-placeholder"></div>
+                            <div class="list-item-placeholder"></div>
+                            <div class="list-item-placeholder"></div>
+                        </div>
+                    </div>
+                    <div class="card-right">
+                        <div class="card-profile">
+                            <h2 class="za">Профиль</h2>
+                            <i data-lucide="user"></i>
+                        </div>
+                        <button id="open-modal-btn" class="btn-primary">Создать новый</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Загрузить файл</h3>
+                <button id="close-modal-btn" class="close-modal-btn">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="drop-zone">
+                    <i data-lucide="file-text"></i>
+                    <p>Перетащите файл сюда</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="load-files-btn" class="btn-primary btn-gradient">Загрузить</button>
+                <button id="cancel-modal-btn" class="btn-secondary">Отмена</button>
+                <button id="cancel-modal-btn" class="btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

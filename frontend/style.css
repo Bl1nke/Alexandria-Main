@@ -1,0 +1,52 @@
+:root{
+    --bg-main: #f8f9fc;
+    --white: #ffffff;
+    --orange: #ff7a00;
+    --purple-light: #9d7dfa;
+    --purple-dark: #7a5af5;
+    --text-dark: #222222;
+    --text-grey: #888888;
+    --border-gray: #e0e0e0;
+    --placeholder-bg: #e5e5e5;
+}
+*{
+    margin: 0; /*убираем внешние отступы*/
+    padding: 0; /*убираем внутренние отступы*/
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+body{
+    background-color: var(--bg-main); /*белый фон*/
+    min-height: 100vh; /*минимальная высота - 100% от высоты видимой части экрана*/
+    display: flex;
+    justify-content: center; /*центрируем содержимое по горизонтали*/
+    align-items: center; /*по вертикали*/
+}
+.app-container{
+    max-width: 1200px;
+    width: 100%; /*контент занимает всю доступную ширину до max-width*/
+    padding: 20px; /*отступы по краям*/
+}
+.bg-gradient-overlay{
+    position: fixed;
+    /*растягиваем текст на весь экран*/
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; /*фон закрепляем под основным контентом*/
+    background: radial-gradient(circle at 10% 10%, rgba(157, 125, 250, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(157, 125, 250, 0.15) 0%, transparent 40%); /*радиальные фиолетовые пятна на фоне*/
+}
+.cards-section{
+    display: flex; /*выстраиваем карточки в ряд*/
+    justify-content: center; /*по центру*/
+    gap: 40px; /*расстояние между карточками*/
+    flex-wrap: wrap;
+}
+.card-left, .card-right{
+    background-color: var(--white);
+    border-radius: 24px; /*радиус скругления*/
+    padding: 30px; /*отступ внутри карточек*/
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); /*тень*/
+    width: 350px; /*ширина*/
+}
