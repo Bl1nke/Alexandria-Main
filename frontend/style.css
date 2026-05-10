@@ -50,3 +50,59 @@ body{
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); /*тень*/
     width: 350px; /*ширина*/
 }
+.za{
+    font-size: 22px; /*размер шрифта*/
+    font-weight: 700; /*толщина шрифта*/
+    color: var(--text-dark);
+    margin-bottom: 25px;
+}
+/*пока серые полоски. потом можно доработать*/
+.card-list-placeholder{
+    display: flex;
+    flex-direction: column; /*располагаем полоски друг под другом*/
+    gap: 12px; /*расстояние между полосками*/
+}
+.list-item-placeholder {
+    height: 14px; /*высота*/
+    border-radius: 10px; /*скругление*/
+    max-width: 100%; /*ширина*/
+    background-color: var(--placeholder-bg);
+}
+.list-item-placeholder:last-child{
+    width: 70%;
+}
+.card-profile{
+    display: flex;
+    justify-content: space-between; /*заголовок влево, а иконку вправо*/
+    align-items: center; /*выравниваем по горизонтали*/
+    margin-bottom: 40px; /*отступ перед кнопкой*/
+}
+.card-profile i{
+    width: 50px;
+    height: 50px;
+    color: var(--purple-light);
+    background-color: #f3f0ff;
+    padding: 10px; /*отступ внутри фона*/
+    border-radius: 50%;
+}
+.btn-primary{
+    width: 100%;
+    background-color: var(--orange); /*цвет кнопки*/
+    color: var(--white); /*цвет текста*/
+    border: none; /*убираем рамку*/
+    padding: 18px; /*внутренние отступы*/
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer; /*курсор в виде руки при наведении*/
+    transition: all 0.3s ease; /*переход при изменениях*/
+}
+/*эффект прии наведении на кнопку*/
+.btn-primary:hover{
+    background-color: #e66e00;
+    transform: translateY(-3px); /*кнопка двигается*/
+    box-shadow: 0 8px 20px rgba(255, 122, 0, 0.3); /*оранжевое свечение*/
+}
+.btn-primary:active{ /*эффект при нажатии на кнопку*/
+    transform: translateY(-1px);
+}

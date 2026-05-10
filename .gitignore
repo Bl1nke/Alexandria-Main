@@ -29,4 +29,4 @@ backend/variants_db.json  # База данных вариантов (созда
 
 # === ОС ===
 .DS_Store                 # macOS
-desktop.ini               # Windows
+desktop.ini               # Windows".vs/" 
