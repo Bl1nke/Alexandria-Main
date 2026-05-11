@@ -106,3 +106,114 @@ body{
 .btn-primary:active{ /*эффект при нажатии на кнопку*/
     transform: translateY(-1px);
 }
+/*модальное окно*/
+.modal-overlay{
+    position: fixed; /*зафиксировали*/
+    /*растянули на весь экран*/
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(157, 125, 250, 0.15); /*полупрозрачный фиолетовый фон*/
+    backdrop-filter: blur(10px); /*эффект размытия*/
+    display: flex; /*центрируем содердимое*/
+    justify-content: center; /*по горизонтали*/
+    align-items: center; /*по вертикали*/
+    z-index: 1000; /*поверх всех остальных элементов*/
+    transition: all 0.3s ease;
+}
+.modal-overlay.hidden{
+    display: none; /*скрытие окна*/
+}
+.modal-content {
+    background-color: var(--white);
+    width: 90%; /*ширина на мобильных устройствах*/
+    max-width: 500px; /*максимальная ширина*/
+    border-radius: 32px; /*сильное скругление углов*/
+    padding: 40px; /*внутренние отступы*/
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1); /*глубокая мягкая тень*/
+}
+/*шапка окна*/
+.modal-header {
+    display: flex;
+    justify-content: space-between; /*заголовок влево, крестик вправо*/
+    align-items: center;
+    margin-bottom: 25px;
+}
+.modal-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+.close-modal-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-grey);
+    transition: color 0.2s;
+}
+.close-modal-btn:hover {
+    color: var(--purple-dark); /*при наведении крестик темнеет*/
+}
+/*зона загрузки файла*/
+.drop-zone {
+    border: 2px dashed var(--border-gray); /*пунктирная рамка*/
+    border-radius: 20px;
+    padding: 50px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /*центрируем иконку и текст*/
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.drop-zone:hover {
+    border-color: var(--purple-light); /*рамка становится фиолетовой*/
+    background-color: rgba(157, 125, 250, 0.02);
+}
+.drop-zone i {
+    width: 45px;
+    height: 45px;
+    color: var(--purple-light);
+}
+
+.drop-zone p {
+    color: var(--text-grey);
+    font-size: 14px;
+    font-weight: 600;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end; /*кнопки в правой части*/
+    gap: 15px;
+    margin-top: 30px;
+}
+/*кнопка загрузки*/
+.btn-gradient {
+    background: linear-gradient(90deg, var(--purple-light), var(--purple-dark));
+    color: white;
+    border: none;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(122, 90, 245, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(122, 90, 245, 0.4);
+}
+/*кнопка отмены*/
+.btn-secondary {
+    background: none;
+    border: none;
+    color: var(--text-grey);
+    font-weight: 700;
+    cursor: pointer;
+    padding: 14px 20px;
+    transition: color 0.2s;
+}
+.btn-secondary:hover {
+    color: var(--text-dark);
+}
