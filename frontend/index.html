@@ -2,59 +2,93 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alexandria</title>
+    <!-- Подключаем Tailwind CSS для удобства стилизации (если еще используешь) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключаем Lucide Icons для иконок -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <meta name="description" content="Краткое описание страницы для SEO">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
-        <div class="bg-gradient-overlay">
-            <div class="content-wrapper">
-                <div class="cards-section">
-                    <div class="card-left">
-                        <h2 class="za">Ваши варианты</h2>
-                        <div class="card-list-placeholder">
-                            <div class="list-item-placeholder"></div>
-                            <div class="list-item-placeholder"></div>
-                            <div class="list-item-placeholder"></div>
-                            <div class="list-item-placeholder"></div>
-                            <div class="list-item-placeholder last-child"></div>
-                        </div>
+        <div class="bg-gradient-overlay"></div>
+        <!-- ============== ЭКРАН 1: СПИСОК ВАРИАНТОВ ============== -->
+        <div id="list-screen" class="content-wrapper">
+            <div class="cards-section">
+                <!-- Левая карточка: список вариантов -->
+                <div class="card card-left">
+                    <h2 class="za">Ваши варианты</h2>
+                    <!-- Здесь будут динамически добавляться варианты JS-ом -->
+                    <div id="variants-list-container" class="card-list-placeholder">
+                        <p class="text-grey text-center">Загрузите первый вариант!</p>
                     </div>
-                    <div class="card-right">
-                        <div class="card-profile">
-                            <h2 class="za">Профиль</h2>
-                            <i data-lucide="user"></i>
-                        </div>
-                        <button id="open-modal-btn" class="btn-primary">Создать новый</button>
+                </div>
+                <!-- Правая карточка: профиль и кнопка "Создать новый" -->
+                <div class="card card-right">
+                    <div class="card-profile">
+                        <h2 class="za">Профиль</h2>
+                        <i data-lucide="user"></i>
                     </div>
+                    <button id="open-upload-modal-btn" class="btn-primary btn-orange new-button">Создать новый</button>
                 </div>
             </div>
         </div>
-    </div>
-    <div id="modal-overlay" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Загрузить файл</h3>
-                <button id="close-modal-btn" class="close-modal-btn">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="drop-zone">
-                    <i data-lucide="file-text"></i>
-                    <p>Перетащите файл сюда</p>
+        <!-- ============== ЭКРАН 2: МОДАЛКА ЗАГРУЗКИ (Оверлей) ============== -->
+        <div id="upload-modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Загрузить файл варианта</h3>
+                    <button id="close-upload-modal-btn" class="close-modal-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="task-drop-zone" class="drop-zone">
+                        <i data-lucide="file-text"></i>
+                        <p>Перетащите файл заданий сюда</p>
+                        <p>или нажмите для выбора</p>
+                        <input type="file" id="task-file-input" class="hidden" accept=".pdf,.doc,.docx">
+                        <span id="task-file-name" class="text-sm text-gray-500"></span>
+                    </div>
+
+                    <div id="answers-drop-zone" class="drop-zone mt-4">
+                        <i data-lucide="file-text"></i>
+                        <p>Перетащите файл ответов сюда</p>
+                        <p>или нажмите для выбора</p>
+                        <input type="file" id="answers-file-input" class="hidden" accept=".json,.txt">
+                        <span id="answers-file-name" class="text-sm text-gray-500"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancel-upload-modal-btn" class="btn-secondary">Отмена</button>
+                    <button id="submit-upload-btn" class="btn-primary btn-gradient">Загрузить</button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button id="load-files-btn" class="btn-primary btn-gradient">Загрузить</button>
-                <button id="cancel-modal-btn" class="btn-secondary">Отмена</button>
-                <button id="cancel-modal-btn" class="btn-secondary">Отмена</button>
+        </div>
+        <!-- ============== ЭКРАН 3: РЕШАТЕЛЬ ЗАДАНИЙ ============== -->
+        <div id="solver-screen" class="content-wrapper hidden">
+            <h2 class="za mb-6">Решение варианта <span id="current-variant-title"></span></h2>
+            <div id="tasks-container" class="solver-tasks-container">
+                <!-- Здесь будут динамически загружаться задания и поля для ответа -->
+            </div>
+            <div class="solver-actions mt-6 flex justify-end gap-4">
+                <button id="cancel-solver-btn" class="btn-secondary">Отмена</button>
+                <button id="submit-answers-btn" class="btn-primary btn-gradient">Отправить ответы</button>
+            </div>
+            <!-- Место для отображения результатов -->
+            <div id="results-container" class="hidden mt-8 p-6 bg-white rounded-xl shadow-md">
+                <h3 class="text-lg font-bold mb-4">Ваши результаты:</h3>
+                <p>Получено баллов: <span id="score-display">0</span></p>
+                <!-- Здесь можно добавить более детальный фидбек -->
+                <button id="back-to-list-btn" class="btn-primary btn-orange mt-4">К списку</button>
             </div>
         </div>
     </div>
+    <!-- Подключаем наш скрипт -->
     <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
