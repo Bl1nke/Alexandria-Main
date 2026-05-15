@@ -8,18 +8,8 @@ from flask_cors import CORS
 
 # Импортируем ваши модули. 
 # Переименовываем parser в variant_parser, чтобы не конфликтовать со встроенным модулем Python
-# import parser as variant_parser
-# import scorer
-
-# Временная заглушка для тестирования backend
-# Было:
-# import parser as variant_parser
-# import scorer
-
-# Стало (временно!):
-import mock_parser as variant_parser
-import mock_scorer as scorer
-
+import parser as variant_parser
+import scorer
 
 
 # === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
