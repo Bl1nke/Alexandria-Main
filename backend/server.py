@@ -11,6 +11,7 @@ from flask_cors import CORS
 import parser as variant_parser
 import scorer
 
+
 # === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
 app = Flask(__name__)
 CORS(app)  # Разрешает фронтенду (даже с другого порта) делать запросы к серверу
@@ -32,9 +33,21 @@ if not os.path.exists(DB_FILE):
 # === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
 def read_db():
-    """Читает variants_db.json и возвращает список вариантов"""
+    """Читает variants_db.json. Если файл пустой или битый -> возвращает пустой список"""
+    if not os.path.exists(DB_FILE):
+        return []
+    
+    # 1. Проверяем, не пустой ли файл физически
+    if os.path.getsize(DB_FILE) == 0:
+        return []
+        
+    # 2. Читаем и парсим с защитой от битого JSON
     with open(DB_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            # Если внутри мусор или незакрытые скобки -> тоже считаем пустым
+            return []
 
 def write_db(data):
     """Записывает обновлённый список вариантов обратно в файл"""
