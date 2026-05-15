@@ -1,4 +1,8 @@
-# backend/server.py
+"""
+ALEXANDRIA — Backend Server
+Flask API для работы с вариантами ЕГЭ
+"""
+
 import os
 import json
 import uuid
@@ -7,21 +11,16 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-# Импортируем ваши модули
-# Переименовываем parser в variant_parser, чтобы не конфликтовать со встроенным модулем Python
-import parser as variant_parser
+import variant_parser   # переименованный parser.py
 import scorer
 
-
-# === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
+# ─── ИНИЦИАЛИЗАЦИЯ ───────────────────────────────────────────
 app = Flask(__name__)
-CORS(app)  # Разрешает CORS-запросы с фронтенда
+CORS(app)
 
-# === НАСТРОЙКИ ПУТЕЙ ===
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
-DB_FILE = os.path.join(BASE_DIR, 'variants_db.json')
-# Путь к папке frontend (на уровень выше backend)
+DB_FILE     = os.path.join(BASE_DIR, 'variants_db.json')
 FRONTEND_DIR = os.path.join(BASE_DIR, '..', 'frontend')
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -31,10 +30,9 @@ if not os.path.exists(DB_FILE):
         json.dump([], f)
 
 
-# === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+# ─── HELPERS ─────────────────────────────────────────────────
 
 def read_db():
-    """Безопасное чтение JSON-базы"""
     if not os.path.exists(DB_FILE) or os.path.getsize(DB_FILE) == 0:
         return []
     with open(DB_FILE, 'r', encoding='utf-8') as f:
@@ -44,106 +42,85 @@ def read_db():
             return []
 
 def write_db(data):
-    """Запись в базу с форматированием"""
     with open(DB_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def safe_filename(original_name):
-    """Оставляет только расширение, убирая опасные символы"""
-    if not original_name or '.' not in original_name:
-        return 'file.tmp'
-    ext = original_name.rsplit('.', 1)[1].lower()
-    return f'variant.{ext}'
+ALLOWED = {'pdf', 'docx'}
+
+def get_ext(filename: str) -> str:
+    return filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
 
 
-# === МАРШРУТЫ: FRONTEND (СТАТИКА) ===
+# ─── СТАТИКА ─────────────────────────────────────────────────
 
 @app.route('/')
 def serve_frontend():
-    """Отдаёт index.html при заходе на корень сайта"""
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
 @app.route('/frontend/<path:filename>')
 def serve_frontend_static(filename):
-    """Отдаёт CSS, JS и другие статические файлы фронтенда"""
     return send_from_directory(FRONTEND_DIR, filename)
 
 @app.route('/uploads/<path:filename>')
 def serve_uploads(filename):
-    """Отдаёт загруженные изображения заданий"""
     return send_from_directory(UPLOADS_DIR, filename)
 
 
-# === МАРШРУТЫ: API ===
+# ─── API: ВАРИАНТЫ ───────────────────────────────────────────
 
 @app.route('/api/variants', methods=['GET'])
 def get_variants():
-    """GET /api/variants — список всех загруженных вариантов"""
     try:
         variants = read_db()
         return jsonify([{
-            'id': v['id'],
-            'name': v['name'],
-            'date': v['date'],
+            'id':          v['id'],
+            'name':        v['name'],
+            'date':        v['date'],
             'tasks_count': v['tasks_count'],
-            'status': v['status']
+            'status':      v['status'],
         } for v in variants])
     except Exception as e:
-        return jsonify({'error': 'Не удалось загрузить список', 'details': str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/upload', methods=['POST'])
 def upload_variant():
-    """
-    POST /api/upload
-    Принимает ТОЛЬКО PDF и DOCX для обоих файлов.
-    """
     if 'variant' not in request.files or 'answers' not in request.files:
         return jsonify({'error': 'Нужно загрузить 2 файла: variant и answers'}), 400
 
     variant_file = request.files['variant']
     answers_file = request.files['answers']
 
-    if not variant_file.filename or not answers_file.filename:
-        return jsonify({'error': 'Имена файлов не могут быть пустыми'}), 400
+    v_ext = get_ext(variant_file.filename)
+    a_ext = get_ext(answers_file.filename)
 
-    # === СТРОГАЯ ВАЛИДАЦИЯ: ТОЛЬКО PDF И DOCX ===
-    allowed_formats = {'pdf', 'docx'}
-    
-    v_ext = variant_file.filename.rsplit('.', 1)[1].lower() if '.' in variant_file.filename else ''
-    a_ext = answers_file.filename.rsplit('.', 1)[1].lower() if '.' in answers_file.filename else ''
+    if v_ext not in ALLOWED:
+        return jsonify({'error': f'Вариант: только PDF или DOCX. Получено: .{v_ext}'}), 400
+    if a_ext not in ALLOWED:
+        return jsonify({'error': f'Ответы: только PDF или DOCX. Получено: .{a_ext}'}), 400
 
-    if v_ext not in allowed_formats:
-        return jsonify({'error': f'Вариант должен быть PDF или DOCX. Получено: {v_ext}'}), 400
-    if a_ext not in allowed_formats:
-        return jsonify({'error': f'Ответы должны быть PDF или DOCX. Получено: {a_ext}'}), 400
-
-    # Генерация ID и структуры папок
-    variant_id = str(uuid.uuid4())
+    variant_id  = str(uuid.uuid4())
     variant_dir = os.path.join(UPLOADS_DIR, variant_id)
-    tasks_dir = os.path.join(variant_dir, 'tasks')
+    tasks_dir   = os.path.join(variant_dir, 'tasks')
     os.makedirs(tasks_dir, exist_ok=True)
 
-    # Сохранение файлов
-    variant_path = os.path.join(variant_dir, safe_filename(variant_file.filename))
+    variant_path = os.path.join(variant_dir, f'variant.{v_ext}')
     answers_path = os.path.join(variant_dir, f'answers_raw.{a_ext}')
     variant_file.save(variant_path)
     answers_file.save(answers_path)
 
-    # Обработка через parser
     try:
         tasks_count = variant_parser.process_variant(variant_path, answers_path, tasks_dir)
     except Exception as e:
         shutil.rmtree(variant_dir, ignore_errors=True)
         return jsonify({'error': 'Ошибка обработки', 'details': str(e)}), 500
 
-    # Регистрация в базе
     new_variant = {
-        'id': variant_id,
-        'name': variant_file.filename,
-        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'id':          variant_id,
+        'name':        variant_file.filename,
+        'date':        datetime.now().strftime('%Y-%m-%d %H:%M'),
         'tasks_count': tasks_count,
-        'status': 'ready'
+        'status':      'ready',
     }
     db = read_db()
     db.append(new_variant)
@@ -154,34 +131,39 @@ def upload_variant():
 
 @app.route('/api/variants/<variant_id>', methods=['GET'])
 def get_variant_details(variant_id):
-    """GET /api/variants/<id> — список заданий (изображений) для варианта"""
     variant_dir = os.path.join(UPLOADS_DIR, variant_id)
-    tasks_dir = os.path.join(variant_dir, 'tasks')
+    tasks_dir   = os.path.join(variant_dir, 'tasks')
 
     if not os.path.exists(variant_dir):
         return jsonify({'error': 'Вариант не найден'}), 404
 
     try:
-        task_images = sorted([
+        # Читаем метаданные каждого задания
+        meta_files = sorted([
             f for f in os.listdir(tasks_dir)
-            if f.startswith('task_') and f.endswith(('.png', '.jpg', '.jpeg'))
-        ])
-        
+            if f.startswith('task_') and f.endswith('_meta.json')
+        ], key=lambda x: int(re.search(r'task_(\d+)_meta', x).group(1))
+        if re.search(r'task_(\d+)_meta', x) else 0)
+
         tasks = []
-        for idx, fname in enumerate(task_images, start=1):
+        for fname in meta_files:
+            with open(os.path.join(tasks_dir, fname), 'r', encoding='utf-8') as f:
+                meta = json.load(f)
             tasks.append({
-                'number': idx,
-                'image_url': f'uploads/{variant_id}/tasks/{fname}'
+                'id':        meta['id'],
+                'type':      meta.get('type', 'unknown'),
+                'type_name': meta.get('type_name', 'Задание'),
+                'text':      meta.get('text', ''),
+                'image_url': f'uploads/{variant_id}/tasks/{meta["image_file"]}',
             })
-        
+
         return jsonify({'id': variant_id, 'tasks': tasks})
     except Exception as e:
-        return jsonify({'error': 'Не удалось прочитать задания', 'details': str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/variants/<variant_id>/submit', methods=['POST'])
 def submit_answers(variant_id):
-    """POST /api/variants/<id>/submit — проверка ответов пользователя"""
     variant_dir = os.path.join(UPLOADS_DIR, variant_id)
     if not os.path.exists(variant_dir):
         return jsonify({'error': 'Вариант не найден'}), 404
@@ -192,34 +174,46 @@ def submit_answers(variant_id):
 
     user_answers = data['answers']
 
-    # Сохраняем ответы пользователя
-    user_answers_path = os.path.join(variant_dir, 'user_answers.json')
-    with open(user_answers_path, 'w', encoding='utf-8') as f:
+    # Сохраняем ответы
+    with open(os.path.join(variant_dir, 'user_answers.json'), 'w', encoding='utf-8') as f:
         json.dump(user_answers, f, ensure_ascii=False, indent=2)
 
-    # Загружаем эталон
-    correct_answers_path = os.path.join(variant_dir, 'answers.json')
-    if not os.path.exists(correct_answers_path):
+    correct_path = os.path.join(variant_dir, 'answers.json')
+    if not os.path.exists(correct_path):
         return jsonify({'error': 'Файл с правильными ответами не найден'}), 404
 
-    with open(correct_answers_path, 'r', encoding='utf-8') as f:
+    with open(correct_path, 'r', encoding='utf-8') as f:
         correct_answers = json.load(f)
 
-    # Проверка через scorer
     try:
         score, total, details = scorer.calculate_score(user_answers, correct_answers)
     except Exception as e:
-        return jsonify({'error': 'Ошибка при проверке', 'details': str(e)}), 500
+        return jsonify({'error': 'Ошибка проверки', 'details': str(e)}), 500
 
     return jsonify({
-        'score': score,
-        'total': total,
-        'percentage': round((score / total * 100), 1) if total > 0 else 0,
-        'details': details
+        'score':      score,
+        'total':      total,
+        'percentage': round(score / total * 100, 1) if total > 0 else 0,
+        'details':    details,
     }), 200
 
 
-# === ОБРАБОТКА ОШИБОК ===
+@app.route('/api/variants/<variant_id>', methods=['DELETE'])
+def delete_variant(variant_id):
+    """Удалить вариант"""
+    variant_dir = os.path.join(UPLOADS_DIR, variant_id)
+    if not os.path.exists(variant_dir):
+        return jsonify({'error': 'Вариант не найден'}), 404
+
+    shutil.rmtree(variant_dir, ignore_errors=True)
+
+    db = [v for v in read_db() if v['id'] != variant_id]
+    write_db(db)
+
+    return jsonify({'status': 'deleted'}), 200
+
+
+# ─── ОШИБКИ ──────────────────────────────────────────────────
 
 @app.errorhandler(404)
 def not_found(e):
@@ -230,10 +224,12 @@ def internal_error(e):
     return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 
-# === ЗАПУСК СЕРВЕРА ===
+# ─── ЗАПУСК ──────────────────────────────────────────────────
+
+import re  # нужен для сортировки в get_variant_details
 
 if __name__ == '__main__':
-    print("▶ Сервер запущен: http://localhost:5000")
-    print(f"📁 Frontend dir: {FRONTEND_DIR}")
-    print(f"📁 Uploads dir: {UPLOADS_DIR}")
+    print("▶  Alexandria запущен: http://localhost:5000")
+    print(f"📁 Frontend:  {FRONTEND_DIR}")
+    print(f"📁 Uploads:   {UPLOADS_DIR}")
     app.run(debug=True, host='0.0.0.0', port=5000)

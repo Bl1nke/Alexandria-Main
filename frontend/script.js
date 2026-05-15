@@ -1,372 +1,560 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // === DOM ЭЛЕМЕНТЫ ===
-    const listScreen = document.getElementById('list-screen');
-    const uploadModal = document.getElementById('upload-modal-overlay');
-    const solverScreen = document.getElementById('solver-screen');
-    const resultsContainer = document.getElementById('results-container');
+/* ═══════════════════════════════════════════
+   ALEXANDRIA — Frontend Logic
+   ═══════════════════════════════════════════ */
 
-    const openUploadModalBtn = document.getElementById('open-upload-modal-btn');
-    const variantsListContainer = document.getElementById('variants-list-container');
-    const currentVariantTitle = document.getElementById('current-variant-title');
+const API = 'http://127.0.0.1:5000/api';
 
-    const closeUploadModalBtn = document.getElementById('close-upload-modal-btn');
-    const cancelUploadModalBtn = document.getElementById('cancel-upload-modal-btn');
-    const submitUploadBtn = document.getElementById('submit-upload-btn');
+// ─── FETCH С ТАЙМАУТОМ ───────────────────────────────────────
+async function apiFetch(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`Сервер не ответил за ${timeoutMs/1000}с. Flask запущен?`);
+    }
+    if (err.message.toLowerCase().includes('failed to fetch')) {
+      throw new Error('Нет соединения с сервером. Запустите: python server.py');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-    const taskDropZone = document.getElementById('task-drop-zone');
-    const taskFileInput = document.getElementById('task-file-input');
-    const taskFileNameSpan = document.getElementById('task-file-name');
-    
-    const answersDropZone = document.getElementById('answers-drop-zone');
-    const answersFileInput = document.getElementById('answers-file-input');
-    const answersFileNameSpan = document.getElementById('answers-file-name');
 
-    const tasksContainer = document.getElementById('tasks-container');
-    const submitAnswersBtn = document.getElementById('submit-answers-btn');
-    const cancelSolverBtn = document.getElementById('cancel-solver-btn');
-    const scoreDisplay = document.getElementById('score-display');
-    const backToListBtn = document.getElementById('back-to-list-btn');
+// ─── СОСТОЯНИЕ ───────────────────────────────────────────────
+const state = {
+  files: { variant: null, answers: null },
+  activeVariantId: null,
+  activeVariantName: '',
+  userAnswers: {},
+  tasks: [],
+};
 
-    // === СОСТОЯНИЕ ===
-    let currentTaskFiles = { tasks: null, answers: null };
-    let activeVariantId = null;
-    let userAnswers = {};
 
-    const API_BASE_URL = 'http://127.0.0.1:5000/api';
+// ─── DOM ─────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
 
-    // === УПРАВЛЕНИЕ ЭКРАНАМИ ===
-    function showScreen(screenToShow) {
-        [listScreen, uploadModal, solverScreen].forEach(screen => {
-            if (screen) screen.classList.add('hidden');
-        });
-        resultsContainer.classList.add('hidden');
-        if (screenToShow) {
-            screenToShow.classList.remove('hidden');
-            if (screenToShow === uploadModal) {
-                setTimeout(() => screenToShow.classList.add('active'), 10);
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = '';
-            }
-        }
+const screens = {
+  list:   $('screen-list'),
+  solver: $('screen-solver'),
+};
+
+const modal = $('modal-upload');
+
+
+// ─── ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ ────────────────────────────────────
+function showScreen(name) {
+  Object.values(screens).forEach(s => {
+    s.classList.remove('active');
+    s.classList.add('hidden');
+  });
+  const s = screens[name];
+  s.classList.remove('hidden');
+  s.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+
+// ─── МОДАЛКА ─────────────────────────────────────────────────
+function openModal() {
+  state.files = { variant: null, answers: null };
+  resetDropZone('zone-variant', 'name-variant', 'input-variant');
+  resetDropZone('zone-answers', 'name-answers', 'input-answers');
+  modal.classList.remove('hidden');
+}
+
+function closeModal() {
+  modal.classList.add('hidden');
+}
+
+function resetDropZone(zoneId, nameId, inputId) {
+  $(zoneId).classList.remove('has-file');
+  $(nameId).textContent = '';
+  $(inputId).value = '';
+}
+
+function setupDropZone(zoneId, inputId, nameId, fileKey) {
+  const zone  = $(zoneId);
+  const input = $(inputId);
+  const name  = $(nameId);
+
+  zone.addEventListener('click', e => {
+    if (e.target === input) return;
+    input.click();
+  });
+
+  input.addEventListener('change', () => {
+    if (input.files[0]) setFile(input.files[0]);
+  });
+
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  function setFile(file) {
+    state.files[fileKey] = file;
+    name.textContent = file.name;
+    zone.classList.add('has-file');
+  }
+}
+
+
+// ─── ЗАГРУЗКА ВАРИАНТА ───────────────────────────────────────
+async function uploadVariant() {
+  const { variant, answers } = state.files;
+  if (!variant || !answers) {
+    alert('Загрузите оба файла: задания и ответы.');
+    return;
+  }
+
+  const btn   = $('btn-submit-upload');
+  const label = $('upload-btn-text');
+  const spin  = $('upload-spinner');
+
+  btn.disabled = true;
+  label.textContent = 'Обработка…';
+  spin.classList.remove('hidden');
+
+  const form = new FormData();
+  form.append('variant', variant);
+  form.append('answers', answers);
+
+  try {
+    // PDF-парсинг может занять время — таймаут 3 минуты
+    const res = await apiFetch(`${API}/upload`, { method: 'POST', body: form }, 180000);
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(`Сервер вернул не-JSON (HTTP ${res.status}). Смотрите консоль Flask.`);
     }
 
-    function openUploadModal() {
-        currentTaskFiles = { tasks: null, answers: null };
-        taskFileNameSpan.textContent = '';
-        answersFileNameSpan.textContent = '';
-        taskFileInput.value = '';
-        answersFileInput.value = '';
-        showScreen(uploadModal);
+    if (!res.ok) {
+      const detail = data.details ? `\nДетали: ${data.details}` : '';
+      throw new Error((data.error || `HTTP ${res.status}`) + detail);
     }
 
-    function closeUploadModal() {
-        uploadModal.classList.remove('active');
-        setTimeout(() => {
-            showScreen(listScreen);
-            document.body.style.overflow = '';
-        }, 300);
+    closeModal();
+    await loadVariants();
+
+  } catch (err) {
+    console.error('Upload error:', err);
+    alert(`❌ Ошибка загрузки\n\n${err.message}\n\nЧто проверить:\n• Flask запущен: python server.py\n• Нет ошибок в терминале Flask`);
+  } finally {
+    btn.disabled = false;
+    label.textContent = 'Загрузить и обработать';
+    spin.classList.add('hidden');
+  }
+}
+
+
+// ─── СПИСОК ВАРИАНТОВ ────────────────────────────────────────
+async function loadVariants() {
+  try {
+    const res  = await apiFetch(`${API}/variants`);
+    const list = await res.json();
+    renderVariants(list);
+  } catch (e) {
+    console.error('Ошибка загрузки списка:', e);
+    const grid = $('variants-grid');
+    grid.querySelectorAll('.variant-card').forEach(c => c.remove());
+    $('empty-state').classList.remove('hidden');
+    $('empty-state').querySelector('p').textContent = e.message;
+  }
+}
+
+function renderVariants(list) {
+  const grid  = $('variants-grid');
+  const empty = $('empty-state');
+
+  grid.querySelectorAll('.variant-card').forEach(c => c.remove());
+  empty.classList.toggle('hidden', list.length > 0);
+  if (list.length === 0) {
+    empty.querySelector('p').textContent = 'Вариантов пока нет.\nЗагрузите первый!';
+  }
+
+  list.forEach(v => {
+    const card = document.createElement('div');
+    card.className = 'variant-card';
+    card.innerHTML = `
+      <div class="vc-name">${escHtml(v.name)}</div>
+      <div class="vc-meta">
+        <span>${escHtml(v.date)}</span>
+        <span class="vc-badge">${v.tasks_count} зад.</span>
+      </div>
+      <div class="vc-actions">
+        <button class="btn-solve">Решать</button>
+        <button class="btn-delete" title="Удалить">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>`;
+
+    card.querySelector('.btn-solve').addEventListener('click', () => startSolver(v.id, v.name));
+    card.querySelector('.btn-delete').addEventListener('click', () => deleteVariant(v.id, card));
+    grid.appendChild(card);
+  });
+}
+
+async function deleteVariant(id, card) {
+  if (!confirm('Удалить вариант?')) return;
+  try {
+    await apiFetch(`${API}/variants/${id}`, { method: 'DELETE' });
+    card.remove();
+    const grid = $('variants-grid');
+    if (!grid.querySelector('.variant-card')) {
+      $('empty-state').classList.remove('hidden');
     }
+  } catch (e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+}
 
-    // === ЗАГРУЗКА ФАЙЛОВ ===
-    function handleFileSelection(files, type, fileNameSpan) {
-        if (files.length > 0) {
-            const file = files[0];
-            currentTaskFiles[type] = file;
-            fileNameSpan.textContent = file.name;
-        } else {
-            currentTaskFiles[type] = null;
-            fileNameSpan.textContent = '';
-        }
-    }
 
-    async function sendFilesToServer() {
-        if (!currentTaskFiles.tasks || !currentTaskFiles.answers) {
-            alert('Пожалуйста, загрузите оба файла: заданий и ответов.');
-            return;
-        }
+// ─── РЕШАТЕЛЬ ────────────────────────────────────────────────
+async function startSolver(variantId, variantName) {
+  state.activeVariantId   = variantId;
+  state.activeVariantName = variantName;
+  state.userAnswers       = {};
+  state.tasks             = [];
 
-        const formData = new FormData();
-        // ИСПРАВЛЕНО: имена полей должны совпадать с бэкендом
-        formData.append('variant', currentTaskFiles.tasks);
-        formData.append('answers', currentTaskFiles.answers);
+  $('solver-title').textContent = variantName;
+  $('tasks-list').innerHTML = '<p style="padding:40px;color:var(--text-muted);text-align:center">Загрузка заданий…</p>';
+  $('results-panel').classList.add('hidden');
 
-        try {
-            // ИСПРАВЛЕНО: правильный эндпоинт
-            const response = await fetch(`${API_BASE_URL}/upload`, {
-                method: 'POST',
-                body: formData,
-            });
+  showScreen('solver');
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Ошибка при загрузке');
-            }
-
-            const result = await response.json();
-            alert('Вариант успешно загружен!');
-            closeUploadModal();
-            fetchVariants();
-
-        } catch (error) {
-            console.error('Ошибка загрузки:', error);
-            alert(`Ошибка: ${error.message}`);
-        }
-    }
-
-    // Drag-and-Drop обработчики
-    [taskDropZone, answersDropZone].forEach(zone => {
-        const type = zone.id === 'task-drop-zone' ? 'tasks' : 'answers';
-        const fileInput = zone.querySelector('input[type="file"]');
-        const fileNameSpan = zone.querySelector('span');
-
-        zone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            zone.style.borderColor = 'var(--purple-dark)';
-            zone.style.backgroundColor = 'rgba(157, 125, 250, 0.1)';
-        });
-        zone.addEventListener('dragleave', () => {
-            zone.style.borderColor = 'var(--border-gray)';
-            zone.style.backgroundColor = 'transparent';
-        });
-        zone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            zone.style.borderColor = 'var(--border-gray)';
-            zone.style.backgroundColor = 'transparent';
-            handleFileSelection(e.dataTransfer.files, type, fileNameSpan);
-        });
-
-        zone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => handleFileSelection(e.target.files, type, fileNameSpan));
-    });
-
-    // === СПИСОК ВАРИАНТОВ ===
-    async function fetchVariants() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/variants`);
-            if (!response.ok) throw new Error('Не удалось получить список вариантов');
-            const variants = await response.json();
-            renderVariants(variants);
-        } catch (error) {
-            console.error('Ошибка:', error);
-            variantsListContainer.innerHTML = `<p class="text-grey text-center">Ошибка: ${error.message}</p>`;
-        }
-    }
-
-    function renderVariants(variants) {
-        variantsListContainer.innerHTML = '';
-        if (variants.length === 0) {
-            variantsListContainer.innerHTML = `<p class="text-grey text-center">Нет загруженных вариантов.</p>`;
-            return;
-        }
-
-        variants.forEach(variant => {
-            const variantDiv = document.createElement('div');
-            variantDiv.className = 'variant-item';
-            variantDiv.dataset.variantId = variant.id;
-
-            const titleSpan = document.createElement('span');
-            titleSpan.textContent = variant.name;
-            variantDiv.appendChild(titleSpan);
-
-            const startBtn = document.createElement('button');
-            startBtn.className = 'start-btn';
-            startBtn.textContent = 'Решать';
-            startBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                startSolving(variant.id, variant.name);
-            });
-            variantDiv.appendChild(startBtn);
-
-            variantsListContainer.appendChild(variantDiv);
-        });
-    }
-
-    // === РЕШАТЕЛЬ ===
-    async function startSolving(variantId, variantTitle) {
-        activeVariantId = variantId;
-        userAnswers = {};
-        currentVariantTitle.textContent = variantTitle;
-        showScreen(solverScreen);
-        await fetchVariantTasks(variantId);
-    }
-
-    async function fetchVariantTasks(variantId) {
-        tasksContainer.innerHTML = '<p class="text-grey text-center">Загрузка...</p>';
-        try {
-            // ИСПРАВЛЕНО: правильный эндпоинт
-            const response = await fetch(`${API_BASE_URL}/variants/${variantId}`);
-            if (!response.ok) throw new Error('Не удалось получить задания');
-            const data = await response.json();
-            renderTasks(data.tasks);
-        } catch (error) {
-            console.error('Ошибка:', error);
-            tasksContainer.innerHTML = `<p class="text-red-500">Ошибка: ${error.message}</p>`;
-        }
-    }
+  try {
+    const res  = await apiFetch(`${API}/variants/${variantId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    state.tasks = data.tasks;
+    renderTasks(data.tasks);
+  } catch (e) {
+    $('tasks-list').innerHTML = `<p style="padding:40px;color:var(--accent)">Ошибка: ${e.message}</p>`;
+  }
+}
 
 function renderTasks(tasks) {
-    tasksContainer.innerHTML = '';
-    
-    if (!tasks || tasks.length === 0) {
-        tasksContainer.innerHTML = '<p class="text-center text-gray-500">Задания не загружены</p>';
-        return;
-    }
-    
-    // Сортируем задания по номеру
-    tasks.sort((a, b) => a.id - b.id);
-    
-    tasks.forEach(task => {
-        const taskDiv = document.createElement('div');
-        taskDiv.className = 'task-card bg-white rounded-xl p-6 mb-6 shadow-md';
-        
-        // Заголовок задания
-        const taskHeader = document.createElement('div');
-        taskHeader.className = 'task-header mb-4';
-        const taskNumber = document.createElement('h3');
-        taskNumber.className = 'text-xl font-bold text-gray-800 mb-2';
-        taskNumber.textContent = `Задание ${task.id}`;
-        
-        // Тип задания
-        const taskType = document.createElement('span');
-        taskType.className = 'inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm';
-        taskType.textContent = getTaskTypeName(task.type);
-        
-        taskHeader.appendChild(taskNumber);
-        taskHeader.appendChild(taskType);
-        taskDiv.appendChild(taskHeader);
-        
-        // Текст задания
-        const taskText = document.createElement('div');
-        taskText.className = 'task-text text-gray-700 mb-4 leading-relaxed';
-        taskText.textContent = task.text || 'Текст задания отсутствует';
-        taskDiv.appendChild(taskText);
-        
-        // Поле для ответа
-        const answerContainer = document.createElement('div');
-        answerContainer.className = 'answer-container';
-        
-        const answerLabel = document.createElement('label');
-        answerLabel.className = 'block text-sm font-medium text-gray-700 mb-2';
-        answerLabel.textContent = 'Ваш ответ:';
-        
-        const answerInput = document.createElement('input');
-        answerInput.type = 'text';
-        answerInput.className = 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent';
-        answerInput.placeholder = 'Введите ответ...';
-        answerInput.dataset.taskId = task.id;
-        
-        // Событие для сохранения ответа
-        answerInput.addEventListener('input', (e) => {
-            userAnswers[task.id] = e.target.value.trim();
-        });
-        
-        answerContainer.appendChild(answerLabel);
-        answerContainer.appendChild(answerInput);
-        taskDiv.appendChild(answerContainer);
-        
-        tasksContainer.appendChild(taskDiv);
+  const list = $('tasks-list');
+  list.innerHTML = '';
+
+  $('solver-progress').textContent = `${tasks.length} заданий`;
+
+  tasks.sort((a, b) => a.id - b.id);
+
+  tasks.forEach(task => {
+    const card = buildTaskCard(task);
+    list.appendChild(card);
+  });
+}
+
+function buildTaskCard(task) {
+  const card = document.createElement('div');
+  card.className = 'task-card';
+  card.id = `task-card-${task.id}`;
+
+  // Шапка
+  card.innerHTML = `
+    <div class="task-card-head">
+      <span class="task-num">№ ${task.id}</span>
+      <span class="task-type-badge">${escHtml(task.type_name || 'Задание')}</span>
+    </div>`;
+
+  // Изображение задания
+  const imgWrap = document.createElement('div');
+  imgWrap.className = 'task-image-wrap';
+  const img = document.createElement('img');
+  img.className = 'task-image';
+  img.alt = `Задание ${task.id}`;
+  img.src = `http://127.0.0.1:5000/${task.image_url}`;
+  img.onerror = () => {
+    imgWrap.innerHTML = `<div style="padding:24px 28px;font-size:15px;line-height:1.7;white-space:pre-wrap">${escHtml(task.text || 'Текст задания недоступен')}</div>`;
+  };
+  imgWrap.appendChild(img);
+  card.appendChild(imgWrap);
+
+  // Canvas для черновых записей
+  const canvasWrap = document.createElement('div');
+  canvasWrap.className = 'task-canvas-wrap';
+
+  const canvasLabel = document.createElement('div');
+  canvasLabel.className = 'task-canvas-label';
+  canvasLabel.textContent = 'ЧЕРНОВИК';
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'task-canvas';
+  canvas.height = 140;
+
+  const toolbar = buildCanvasToolbar(canvas);
+
+  canvasWrap.appendChild(canvasLabel);
+  canvasWrap.appendChild(canvas);
+  canvasWrap.appendChild(toolbar);
+  card.appendChild(canvasWrap);
+
+  requestAnimationFrame(() => {
+    canvas.width = canvas.offsetWidth || 800;
+    initCanvas(canvas);
+  });
+
+  // Поле ответа
+  const answerWrap = document.createElement('div');
+  answerWrap.className = 'task-answer-wrap';
+  answerWrap.innerHTML = `
+    <label class="answer-label" for="answer-${task.id}">Ответ</label>
+    <input
+      class="answer-input"
+      id="answer-${task.id}"
+      type="text"
+      placeholder="Введите ответ…"
+      autocomplete="off"
+      data-task-id="${task.id}"
+    />
+    <div class="answer-feedback" id="feedback-${task.id}"></div>`;
+
+  answerWrap.querySelector('.answer-input').addEventListener('input', e => {
+    state.userAnswers[String(task.id)] = e.target.value.trim();
+  });
+
+  card.appendChild(answerWrap);
+  return card;
+}
+
+
+// ─── CANVAS ──────────────────────────────────────────────────
+function buildCanvasToolbar(canvas) {
+  const toolbar = document.createElement('div');
+  toolbar.className = 'canvas-toolbar';
+
+  const colors = ['#1a1814', '#c0392b', '#27ae60', '#2980b9'];
+  canvas._drawColor = colors[0];
+  canvas._drawSize  = 2;
+
+  colors.forEach(c => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot' + (c === canvas._drawColor ? ' active' : '');
+    dot.style.background = c;
+    dot.addEventListener('click', () => {
+      toolbar.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      canvas._drawColor = c;
     });
+    toolbar.appendChild(dot);
+  });
+
+  const sizeBtn = document.createElement('button');
+  sizeBtn.textContent = 'Тонко';
+  sizeBtn.addEventListener('click', () => {
+    if (canvas._drawSize === 2) {
+      canvas._drawSize = 5;
+      sizeBtn.textContent = 'Толсто';
+    } else {
+      canvas._drawSize = 2;
+      sizeBtn.textContent = 'Тонко';
+    }
+  });
+
+  const sep = document.createElement('div');
+  sep.className = 'separator';
+
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Очистить';
+  clearBtn.addEventListener('click', () => {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+
+  toolbar.appendChild(sizeBtn);
+  toolbar.appendChild(sep);
+  toolbar.appendChild(clearBtn);
+  return toolbar;
 }
 
-function getTaskTypeName(type) {
-    const types = {
-        'union_selection': 'Выбор союза',
-        'lexical_meaning': 'Лексика',
-        'text_analysis': 'Анализ текста',
-        'stress': 'Ударение',
-        'paronym': 'Паронимы',
-        'word_correction': 'Исправление слова',
-        'word_form': 'Форма слова',
-        'grammar_error': 'Грамматика',
-        'root_vowel': 'Корни',
-        'prefix': 'Приставки',
-        'suffix': 'Суффиксы',
-        'verb_ending': 'Глаголы',
-        'ne_with_word': 'НЕ с словами',
-        'union_spelling': 'Союзы',
-        'nn_spelling': 'НН',
-        'punctuation_one_comma': 'Пунктуация',
-        'punctuation_participles': 'Обороты',
-        'punctuation_intro': 'Вводные слова',
-        'punctuation_complex': 'Сложное предложение',
-        'punctuation_complex2': 'Сложное с И',
-        'dash_usage': 'Тире',
-        'expressive_means': 'Средства выразительности',
-        'content_analysis': 'Содержание',
-        'text_features': 'Особенности текста',
-        'phraseology': 'Фразеология',
-        'text_connection': 'Связь предложений',
-        'essay': 'Сочинение',
-        'unknown': 'Задание'
-    };
-    return types[type] || 'Задание';
+function initCanvas(canvas) {
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if (e.touches) {
+      return [
+        (e.touches[0].clientX - rect.left) * scaleX,
+        (e.touches[0].clientY - rect.top)  * scaleY,
+      ];
+    }
+    return [
+      (e.clientX - rect.left) * scaleX,
+      (e.clientY - rect.top)  * scaleY,
+    ];
+  }
+
+  canvas.addEventListener('mousedown',  e => { drawing = true; [lastX, lastY] = getPos(e); });
+  canvas.addEventListener('mousemove',  e => {
+    if (!drawing) return;
+    const [x, y] = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = canvas._drawColor || '#1a1814';
+    ctx.lineWidth   = canvas._drawSize  || 2;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
+    [lastX, lastY] = [x, y];
+  });
+  canvas.addEventListener('mouseup',    () => { drawing = false; });
+  canvas.addEventListener('mouseleave', () => { drawing = false; });
+  canvas.addEventListener('touchstart',  e => { e.preventDefault(); drawing = true; [lastX, lastY] = getPos(e); }, { passive: false });
+  canvas.addEventListener('touchmove',   e => {
+    if (!drawing) return;
+    e.preventDefault();
+    const [x, y] = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y);
+    ctx.strokeStyle = canvas._drawColor || '#1a1814';
+    ctx.lineWidth   = canvas._drawSize  || 2;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+    [lastX, lastY] = [x, y];
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => { drawing = false; });
 }
 
-    // === ОТПРАВКА ОТВЕТОВ ===
-    function collectAnswers() {
-        // Собираем ответы из input-полей
-        const inputs = document.querySelectorAll('.task-answer-input');
-        inputs.forEach(input => {
-            const id = input.dataset.taskId;
-            userAnswers[id] = input.value.trim();
-        });
-        return userAnswers;
-    }
 
-    async function submitAnswers() {
-        if (!activeVariantId) {
-            alert('Выберите вариант для решения.');
-            return;
+// ─── ПРОВЕРКА ОТВЕТОВ ────────────────────────────────────────
+async function submitAnswers() {
+  if (!state.activeVariantId) return;
+
+  // Собираем из всех input'ов (страховка)
+  document.querySelectorAll('.answer-input').forEach(input => {
+    const id = input.dataset.taskId;
+    if (id) state.userAnswers[id] = input.value.trim();
+  });
+
+  try {
+    const res  = await apiFetch(`${API}/variants/${state.activeVariantId}/submit`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ answers: state.userAnswers }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    showResults(data);
+    markAnswers(data.details);
+  } catch (e) {
+    alert(`Ошибка проверки: ${e.message}`);
+  }
+}
+
+function markAnswers(details) {
+  details.forEach(d => {
+    const input    = $(`answer-${d.id}`);
+    const feedback = $(`feedback-${d.id}`);
+    if (!input) return;
+
+    input.classList.remove('correct', 'wrong');
+    feedback.classList.remove('correct', 'wrong');
+
+    if (d.correct) {
+      input.classList.add('correct');
+      feedback.classList.add('correct');
+      feedback.textContent = '✓ Верно';
+    } else {
+      input.classList.add('wrong');
+      feedback.classList.add('wrong');
+      feedback.textContent = d.correct_answer
+        ? `✗ Правильно: ${d.correct_answer}`
+        : '✗ Неверно';
+    }
+  });
+}
+
+function showResults(data) {
+  $('score-num').textContent   = data.score;
+  $('score-total').textContent = `/${data.total}`;
+  $('score-pct').textContent   = `${data.percentage}%`;
+
+  const arc = $('score-arc');
+  const circumference = 2 * Math.PI * 52;
+  const pct = data.total > 0 ? data.score / data.total : 0;
+  arc.style.strokeDashoffset = circumference * (1 - pct);
+  arc.style.transition = 'stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)';
+  arc.style.stroke = pct >= 0.6 ? 'var(--green)' : 'var(--accent)';
+
+  const details = $('results-details');
+  details.innerHTML = '';
+  data.details.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'detail-row';
+    row.innerHTML = `
+      <span class="detail-num">#${d.id}</span>
+      <span class="detail-status">${d.correct ? '✅' : '❌'}</span>
+      <span class="detail-answer">
+        ${d.correct
+          ? `<span class="detail-correct">${escHtml(d.user_answer || '—')}</span>`
+          : `<span style="color:var(--accent)">${escHtml(d.user_answer || '—')}</span>
+             ${d.correct_answer ? `<span style="color:var(--text-muted)"> → ${escHtml(d.correct_answer)}</span>` : ''}`
         }
+      </span>`;
+    details.appendChild(row);
+  });
 
-        const answers = collectAnswers();
+  $('results-panel').classList.remove('hidden');
+  $('results-panel').scrollIntoView({ behavior: 'smooth' });
+}
 
-        try {
-            // ИСПРАВЛЕНО: правильный эндпоинт
-            const response = await fetch(`${API_BASE_URL}/variants/${activeVariantId}/submit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers }),
-            });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Ошибка проверки');
-            }
+// ─── УТИЛИТЫ ─────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-            const result = await response.json();
-            displayResults(result);
 
-        } catch (error) {
-            console.error('Ошибка:', error);
-            alert(`Ошибка: ${error.message}`);
-        }
-    }
+// ─── ИНИЦИАЛИЗАЦИЯ ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  $('btn-open-upload').addEventListener('click', openModal);
+  $('btn-close-upload').addEventListener('click', closeModal);
+  $('btn-cancel-upload').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    function displayResults(results) {
-        scoreDisplay.textContent = `${results.score} из ${results.total} (${results.percentage}%)`;
-        resultsContainer.classList.remove('hidden');
-        resultsContainer.scrollIntoView({ behavior: 'smooth' });
-    }
+  setupDropZone('zone-variant', 'input-variant', 'name-variant', 'variant');
+  setupDropZone('zone-answers', 'input-answers', 'name-answers', 'answers');
 
-    // === ИНИЦИАЛИЗАЦИЯ ===
-    function initializeApp() {
-        showScreen(listScreen);
-        fetchVariants();
+  $('btn-submit-upload').addEventListener('click', uploadVariant);
 
-        openUploadModalBtn.addEventListener('click', openUploadModal);
-        closeUploadModalBtn.addEventListener('click', closeUploadModal);
-        cancelUploadModalBtn.addEventListener('click', closeUploadModal);
-        submitUploadBtn.addEventListener('click', sendFilesToServer);
-        
-        submitAnswersBtn.addEventListener('click', submitAnswers);
-        cancelSolverBtn.addEventListener('click', () => showScreen(listScreen));
-        backToListBtn.addEventListener('click', () => {
-            resultsContainer.classList.add('hidden');
-            showScreen(listScreen);
-        });
-    }
+  $('btn-back').addEventListener('click', () => {
+    showScreen('list');
+    loadVariants();
+  });
+  $('btn-submit-answers').addEventListener('click', submitAnswers);
+  $('btn-results-back').addEventListener('click', () => {
+    $('results-panel').classList.add('hidden');
+    showScreen('list');
+    loadVariants();
+  });
 
-    initializeApp();
+  showScreen('list');
+  loadVariants();
 });
