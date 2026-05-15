@@ -1,95 +1,144 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alexandria</title>
-    <!-- Подключаем Tailwind CSS для удобства стилизации (если еще используешь) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключаем Lucide Icons для иконок -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="/frontend/style.css">
-    <script src="/frontend/script.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alexandria · ЕГЭ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/frontend/style.css" />
 </head>
 <body>
-    <div class="app-container">
-        <div class="bg-gradient-overlay"></div>
-        <!-- ============== ЭКРАН 1: СПИСОК ВАРИАНТОВ ============== -->
-        <div id="list-screen" class="content-wrapper">
-            <div class="cards-section">
-                <!-- Левая карточка: список вариантов -->
-                <div class="card card-left">
-                    <h2 class="za">Ваши варианты</h2>
-                    <!-- Здесь будут динамически добавляться варианты JS-ом -->
-                    <div id="variants-list-container" class="card-list-placeholder">
-                        <p class="text-grey text-center">Загрузите первый вариант!</p>
-                    </div>
-                </div>
-                <!-- Правая карточка: профиль и кнопка "Создать новый" -->
-                <div class="card card-right">
-                    <div class="card-profile">
-                        <h2 class="za">Профиль</h2>
-                        <i data-lucide="user"></i>
-                    </div>
-                    <button id="open-upload-modal-btn" class="btn-primary btn-orange new-button">Создать новый</button>
-                </div>
-            </div>
-        </div>
-        <!-- ============== ЭКРАН 2: МОДАЛКА ЗАГРУЗКИ (Оверлей) ============== -->
-        <div id="upload-modal-overlay" class="modal-overlay hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">Загрузить файл варианта</h3>
-                    <button id="close-upload-modal-btn" class="close-modal-btn">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div id="task-drop-zone" class="drop-zone">
-                        <i data-lucide="file-text"></i>
-                        <p>Перетащите файл заданий сюда</p>
-                        <p>или нажмите для выбора</p>
-                        <input type="file" id="task-file-input" class="hidden" accept=".pdf,.docx">
-                        <span id="task-file-name" class="text-sm text-gray-500"></span>
-                    </div>
 
-                    <div id="answers-drop-zone" class="drop-zone mt-4">
-                        <i data-lucide="file-text"></i>
-                        <p>Перетащите файл ответов сюда</p>
-                        <p>или нажмите для выбора</p>
-                        <input type="file" id="answers-file-input" class="hidden" accept=".pdf,.docx">
-                        <span id="answers-file-name" class="text-sm text-gray-500"></span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="cancel-upload-modal-btn" class="btn-secondary">Отмена</button>
-                    <button id="submit-upload-btn" class="btn-primary btn-gradient">Загрузить</button>
-                </div>
-            </div>
-        </div>
-        <!-- ============== ЭКРАН 3: РЕШАТЕЛЬ ЗАДАНИЙ ============== -->
-        <div id="solver-screen" class="content-wrapper hidden">
-            <h2 class="za mb-6">Решение варианта <span id="current-variant-title"></span></h2>
-            <div id="tasks-container" class="solver-tasks-container">
-                <!-- Здесь будут динамически загружаться задания и поля для ответа -->
-            </div>
-            <div class="solver-actions mt-6 flex justify-end gap-4">
-                <button id="cancel-solver-btn" class="btn-secondary">Отмена</button>
-                <button id="submit-answers-btn" class="btn-primary btn-gradient">Отправить ответы</button>
-            </div>
-            <!-- Место для отображения результатов -->
-            <div id="results-container" class="hidden mt-8 p-6 bg-white rounded-xl shadow-md">
-                <h3 class="text-lg font-bold mb-4">Ваши результаты:</h3>
-                <p>Получено баллов: <span id="score-display">0</span></p>
-                <!-- Здесь можно добавить более детальный фидбек -->
-                <button id="back-to-list-btn" class="btn-primary btn-orange mt-4">К списку</button>
-            </div>
-        </div>
+<!-- ══════════════════════ ЭКРАН: СПИСОК ══════════════════════ -->
+<div id="screen-list" class="screen active">
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-icon">Λ</span>
+      <span class="logo-text">Alexandria</span>
     </div>
-    <!-- Подключаем наш скрипт -->
-    <script src="script.js"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <nav class="header-nav">
+      <span class="nav-hint">Подготовка к ЕГЭ</span>
+    </nav>
+  </header>
+
+  <main class="list-main">
+    <section class="hero">
+      <h1 class="hero-title">Ваши варианты</h1>
+      <p class="hero-sub">Загружайте PDF или DOCX — Alexandria разберёт задания и проверит ответы.</p>
+      <button class="btn-new" id="btn-open-upload">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Новый вариант
+      </button>
+    </section>
+
+    <section class="variants-grid" id="variants-grid">
+      <!-- заполняется JS -->
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">📄</div>
+        <p>Вариантов пока нет.<br>Загрузите первый!</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+
+<!-- ══════════════════════ МОДАЛКА: ЗАГРУЗКА ══════════════════════ -->
+<div id="modal-upload" class="modal-backdrop hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 class="modal-title">Загрузить вариант</h2>
+      <button class="btn-icon" id="btn-close-upload" aria-label="Закрыть">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Зона заданий -->
+      <div class="drop-zone" id="zone-variant" data-target="variant">
+        <input type="file" id="input-variant" accept=".pdf,.docx" hidden />
+        <div class="dz-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><polyline points="9 14 12 11 15 14"/></svg>
+        </div>
+        <p class="dz-title">Файл заданий</p>
+        <p class="dz-hint">PDF или DOCX — перетащите или нажмите</p>
+        <span class="dz-filename" id="name-variant"></span>
+      </div>
+
+      <!-- Зона ответов -->
+      <div class="drop-zone" id="zone-answers" data-target="answers">
+        <input type="file" id="input-answers" accept=".pdf,.docx" hidden />
+        <div class="dz-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+        </div>
+        <p class="dz-title">Файл ответов</p>
+        <p class="dz-hint">PDF или DOCX — перетащите или нажмите</p>
+        <span class="dz-filename" id="name-answers"></span>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn-ghost" id="btn-cancel-upload">Отмена</button>
+      <button class="btn-upload" id="btn-submit-upload">
+        <span id="upload-btn-text">Загрузить и обработать</span>
+        <span id="upload-spinner" class="spinner hidden"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════ ЭКРАН: РЕШАТЕЛЬ ══════════════════════ -->
+<div id="screen-solver" class="screen hidden">
+  <header class="solver-header">
+    <button class="btn-back" id="btn-back">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      К списку
+    </button>
+    <span class="solver-title" id="solver-title">Вариант</span>
+    <div class="solver-progress" id="solver-progress"></div>
+  </header>
+
+  <!-- Задания -->
+  <div id="tasks-list" class="tasks-list">
+    <!-- заполняется JS -->
+  </div>
+
+  <!-- Панель отправки -->
+  <footer class="solver-footer">
+    <button class="btn-check" id="btn-submit-answers">
+      Проверить ответы
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
+  </footer>
+
+  <!-- Результаты (появляются поверх) -->
+  <div id="results-panel" class="results-panel hidden">
+    <div class="results-box">
+      <h2 class="results-title">Результаты</h2>
+      <div class="score-ring">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="8"/>
+          <circle id="score-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                  transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="score-center">
+          <span class="score-num" id="score-num">0</span>
+          <span class="score-total" id="score-total">/0</span>
+        </div>
+      </div>
+      <p class="score-pct" id="score-pct">0%</p>
+
+      <div class="results-details" id="results-details">
+        <!-- детали по заданиям -->
+      </div>
+
+      <button class="btn-ghost results-back" id="btn-results-back">← Вернуться к списку</button>
+    </div>
+  </div>
+</div>
+
+<script src="/frontend/script.js"></script>
 </body>
 </html>
