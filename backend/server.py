@@ -2,11 +2,12 @@
 import os
 import json
 import uuid
+import shutil
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-# Импортируем ваши модули. 
+# Импортируем ваши модули
 # Переименовываем parser в variant_parser, чтобы не конфликтовать со встроенным модулем Python
 import parser as variant_parser
 import scorer
@@ -14,64 +15,72 @@ import scorer
 
 # === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
 app = Flask(__name__)
-CORS(app)  # Разрешает фронтенду (даже с другого порта) делать запросы к серверу
+CORS(app)  # Разрешает CORS-запросы с фронтенда
 
 # === НАСТРОЙКИ ПУТЕЙ ===
-# os.path.dirname(os.path.abspath(__file__)) → путь к папке, где лежит server.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
 DB_FILE = os.path.join(BASE_DIR, 'variants_db.json')
+# Путь к папке frontend (на уровень выше backend)
+FRONTEND_DIR = os.path.join(BASE_DIR, '..', 'frontend')
 
-# Создаём папку uploads при первом запуске, если её нет
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
-# Если файла базы нет, создаём пустой список
 if not os.path.exists(DB_FILE):
     with open(DB_FILE, 'w', encoding='utf-8') as f:
         json.dump([], f)
 
+
 # === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
 def read_db():
-    """Читает variants_db.json. Если файл пустой или битый -> возвращает пустой список"""
-    if not os.path.exists(DB_FILE):
+    """Безопасное чтение JSON-базы"""
+    if not os.path.exists(DB_FILE) or os.path.getsize(DB_FILE) == 0:
         return []
-    
-    # 1. Проверяем, не пустой ли файл физически
-    if os.path.getsize(DB_FILE) == 0:
-        return []
-        
-    # 2. Читаем и парсим с защитой от битого JSON
     with open(DB_FILE, 'r', encoding='utf-8') as f:
         try:
             return json.load(f)
         except json.JSONDecodeError:
-            # Если внутри мусор или незакрытые скобки -> тоже считаем пустым
             return []
 
 def write_db(data):
-    """Записывает обновлённый список вариантов обратно в файл"""
+    """Запись в базу с форматированием"""
     with open(DB_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def safe_filename(original_name):
-    """Оставляет только расширение файла, убирая опасные символы из имени"""
+    """Оставляет только расширение, убирая опасные символы"""
     if not original_name or '.' not in original_name:
         return 'file.tmp'
     ext = original_name.rsplit('.', 1)[1].lower()
     return f'variant.{ext}'
 
-# === МАРШРУТЫ (API ENDPOINTS) ===
+
+# === МАРШРУТЫ: FRONTEND (СТАТИКА) ===
+
+@app.route('/')
+def serve_frontend():
+    """Отдаёт index.html при заходе на корень сайта"""
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+@app.route('/frontend/<path:filename>')
+def serve_frontend_static(filename):
+    """Отдаёт CSS, JS и другие статические файлы фронтенда"""
+    return send_from_directory(FRONTEND_DIR, filename)
+
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    """Отдаёт загруженные изображения заданий"""
+    return send_from_directory(UPLOADS_DIR, filename)
+
+
+# === МАРШРУТЫ: API ===
 
 @app.route('/api/variants', methods=['GET'])
 def get_variants():
-    """
-    GET /api/variants
-    Возвращает список всех загруженных вариантов для отображения на главной странице.
-    """
+    """GET /api/variants — список всех загруженных вариантов"""
     try:
         variants = read_db()
-        # Отдаём только безопасные поля, без внутренних путей
         return jsonify([{
             'id': v['id'],
             'name': v['name'],
@@ -80,62 +89,55 @@ def get_variants():
             'status': v['status']
         } for v in variants])
     except Exception as e:
-        return jsonify({'error': 'Не удалось загрузить список вариантов', 'details': str(e)}), 500
+        return jsonify({'error': 'Не удалось загрузить список', 'details': str(e)}), 500
 
 
 @app.route('/api/upload', methods=['POST'])
 def upload_variant():
     """
     POST /api/upload
-    Принимает 2 файла: вариант (pdf/docx) и ответы (txt/json/csv).
-    Сохраняет, запускает парсер, регистрирует вариант в базе.
+    Принимает ТОЛЬКО PDF и DOCX для обоих файлов.
     """
-    # 1. Проверка наличия файлов
     if 'variant' not in request.files or 'answers' not in request.files:
-        return jsonify({'error': 'Отсутствуют файлы. Нужны variant и answers'}), 400
+        return jsonify({'error': 'Нужно загрузить 2 файла: variant и answers'}), 400
 
     variant_file = request.files['variant']
     answers_file = request.files['answers']
 
-    if variant_file.filename == '' or answers_file.filename == '':
-        return jsonify({'error': 'Файлы не выбраны'}), 400
+    if not variant_file.filename or not answers_file.filename:
+        return jsonify({'error': 'Имена файлов не могут быть пустыми'}), 400
 
-    # 2. Валидация расширений
-    allowed_ext = {'pdf', 'docx'}
-    allowed_ans_ext = {'txt', 'json', 'csv'}
+    # === СТРОГАЯ ВАЛИДАЦИЯ: ТОЛЬКО PDF И DOCX ===
+    allowed_formats = {'pdf', 'docx'}
     
     v_ext = variant_file.filename.rsplit('.', 1)[1].lower() if '.' in variant_file.filename else ''
     a_ext = answers_file.filename.rsplit('.', 1)[1].lower() if '.' in answers_file.filename else ''
 
-    if v_ext not in allowed_ext:
-        return jsonify({'error': f'Формат варианта должен быть PDF или DOCX. Получено: {v_ext}'}), 400
-    if a_ext not in allowed_ans_ext:
-        return jsonify({'error': f'Формат ответов должен быть TXT, JSON или CSV. Получено: {a_ext}'}), 400
+    if v_ext not in allowed_formats:
+        return jsonify({'error': f'Вариант должен быть PDF или DOCX. Получено: {v_ext}'}), 400
+    if a_ext not in allowed_formats:
+        return jsonify({'error': f'Ответы должны быть PDF или DOCX. Получено: {a_ext}'}), 400
 
-    # 3. Генерация уникального ID и создание структуры папок
+    # Генерация ID и структуры папок
     variant_id = str(uuid.uuid4())
     variant_dir = os.path.join(UPLOADS_DIR, variant_id)
     tasks_dir = os.path.join(variant_dir, 'tasks')
     os.makedirs(tasks_dir, exist_ok=True)
 
-    # 4. Сохранение исходных файлов
+    # Сохранение файлов
     variant_path = os.path.join(variant_dir, safe_filename(variant_file.filename))
-    answers_path = os.path.join(variant_dir, 'answers_raw.txt')
-    
+    answers_path = os.path.join(variant_dir, f'answers_raw.{a_ext}')
     variant_file.save(variant_path)
     answers_file.save(answers_path)
 
-    # 5. Запуск парсера
+    # Обработка через parser
     try:
-        # variant_parser.process_variant возвращает количество найденных заданий
         tasks_count = variant_parser.process_variant(variant_path, answers_path, tasks_dir)
     except Exception as e:
-        # Если парсер упал, чистим папку и возвращаем ошибку
-        import shutil
         shutil.rmtree(variant_dir, ignore_errors=True)
-        return jsonify({'error': 'Ошибка обработки файла', 'details': str(e)}), 500
+        return jsonify({'error': 'Ошибка обработки', 'details': str(e)}), 500
 
-    # 6. Запись в базу данных
+    # Регистрация в базе
     new_variant = {
         'id': variant_id,
         'name': variant_file.filename,
@@ -152,26 +154,24 @@ def upload_variant():
 
 @app.route('/api/variants/<variant_id>', methods=['GET'])
 def get_variant_details(variant_id):
-    """
-    GET /api/variants/<id>
-    Возвращает список заданий (картинок) для конкретного варианта.
-    """
+    """GET /api/variants/<id> — список заданий (изображений) для варианта"""
     variant_dir = os.path.join(UPLOADS_DIR, variant_id)
     tasks_dir = os.path.join(variant_dir, 'tasks')
 
     if not os.path.exists(variant_dir):
         return jsonify({'error': 'Вариант не найден'}), 404
 
-    # Сканируем папку tasks, сортируем по имени, формируем массив
     try:
-        task_files = sorted([f for f in os.listdir(tasks_dir) if f.endswith(('.jpg', '.jpeg', '.png'))])
+        task_images = sorted([
+            f for f in os.listdir(tasks_dir)
+            if f.startswith('task_') and f.endswith(('.png', '.jpg', '.jpeg'))
+        ])
+        
         tasks = []
-        for idx, fname in enumerate(task_files, start=1):
-            # Формируем относительный путь для фронтенда
-            rel_path = f'uploads/{variant_id}/tasks/{fname}'
+        for idx, fname in enumerate(task_images, start=1):
             tasks.append({
                 'number': idx,
-                'image_url': rel_path
+                'image_url': f'uploads/{variant_id}/tasks/{fname}'
             })
         
         return jsonify({'id': variant_id, 'tasks': tasks})
@@ -181,27 +181,23 @@ def get_variant_details(variant_id):
 
 @app.route('/api/variants/<variant_id>/submit', methods=['POST'])
 def submit_answers(variant_id):
-    """
-    POST /api/variants/<id>/submit
-    Принимает ответы пользователя, сохраняет, вызывает scorer, возвращает результат.
-    """
+    """POST /api/variants/<id>/submit — проверка ответов пользователя"""
     variant_dir = os.path.join(UPLOADS_DIR, variant_id)
     if not os.path.exists(variant_dir):
         return jsonify({'error': 'Вариант не найден'}), 404
 
-    # 1. Получаем JSON с ответами от фронтенда
     data = request.get_json()
     if not data or 'answers' not in data:
         return jsonify({'error': 'Нет данных с ответами'}), 400
 
     user_answers = data['answers']
 
-    # 2. Сохраняем ответы пользователя на диск
+    # Сохраняем ответы пользователя
     user_answers_path = os.path.join(variant_dir, 'user_answers.json')
     with open(user_answers_path, 'w', encoding='utf-8') as f:
         json.dump(user_answers, f, ensure_ascii=False, indent=2)
 
-    # 3. Загружаем эталонные ответы
+    # Загружаем эталон
     correct_answers_path = os.path.join(variant_dir, 'answers.json')
     if not os.path.exists(correct_answers_path):
         return jsonify({'error': 'Файл с правильными ответами не найден'}), 404
@@ -209,7 +205,7 @@ def submit_answers(variant_id):
     with open(correct_answers_path, 'r', encoding='utf-8') as f:
         correct_answers = json.load(f)
 
-    # 4. Вызываем модуль проверки
+    # Проверка через scorer
     try:
         score, total, details = scorer.calculate_score(user_answers, correct_answers)
     except Exception as e:
@@ -223,28 +219,21 @@ def submit_answers(variant_id):
     }), 200
 
 
-# === ОТДАЧА СТАТИЧЕСКИХ ФАЙЛОВ (КАРТИНОК) ===
-# Фронтенд будет запрашивать картинки по пути /uploads/...
-# Этот маршрут говорит Flask: "возьми файл из папки uploads и отдай браузеру"
-@app.route('/uploads/<path:filename>')
-def serve_uploads(filename):
-    return send_from_directory(UPLOADS_DIR, filename)
-
-
 # === ОБРАБОТКА ОШИБОК ===
+
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({'error': 'Запрос не найден'}), 404
+    return jsonify({'error': 'Endpoint not found'}), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+    return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 
 # === ЗАПУСК СЕРВЕРА ===
+
 if __name__ == '__main__':
-    # debug=True → сервер перезагружается при изменении кода
-    # НЕ использовать debug=True при хостинге. Дыры безопасности
-    # port=5000 → стандартный порт Flask
-    print("Сервер запущен на http://localhost:5000")
+    print("▶ Сервер запущен: http://localhost:5000")
+    print(f"📁 Frontend dir: {FRONTEND_DIR}")
+    print(f"📁 Uploads dir: {UPLOADS_DIR}")
     app.run(debug=True, host='0.0.0.0', port=5000)
