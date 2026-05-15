@@ -1,0 +1,373 @@
+:root {
+    --bg-main: #f8f9fc;
+    --white: #ffffff;
+    --orange: #ff7a00;
+    --purple-light: #9d7dfa;
+    --purple-dark: #7a5af5;
+    --text-dark: #222222;
+    --text-grey: #888888;
+    --border-gray: #e0e0e0;
+    --placeholder-bg: #e5e5e5;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif; /* Можно использовать 'Inter' или любой другой */
+}
+body {
+    background-color: var(--bg-main);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden; /* Предотвращаем горизонтальный скролл */
+}
+.app-container {
+    max-width: 1200px;
+    width: 100%;
+    padding: 20px;
+    position: relative; /* Для позиционирования оверлея */
+}
+.bg-gradient-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: radial-gradient(circle at 10% 10%, rgba(157, 125, 250, 0.1) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(157, 125, 250, 0.15) 0%, transparent 40%);
+}
+.content-wrapper {
+    transition: opacity 0.3s ease; /* Плавное появление/исчезание */
+}
+.hidden {
+    display: none !important; /* !important гарантирует скрытие */
+}
+/* --- Стили для карточек списка --- */
+.cards-section {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+}
+.card { /* Общий класс для card-left и card-right */
+    background-color: var(--white);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    width: 350px;
+}
+.za { /* Заголовки */
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 25px;
+}
+.card-list-placeholder { /* Контейнер для списка вариантов/заглушек */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.variant-item { /* Стили для динамически создаваемых вариантов */
+    background-color: var(--placeholder-bg); /* Изначально как заглушка */
+    border-radius: 10px;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.variant-item:hover {
+    background-color: #d8d8d8;
+}
+.variant-item .start-btn {
+    background-color: var(--purple-light);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.variant-item .start-btn:hover {
+     background-color: var(--purple-dark);
+}
+/* --- Стили для правой карточки (Профиль) --- */
+.card-profile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+}
+.card-profile i {
+    width: 50px;
+    height: 50px;
+    color: var(--purple-light);
+    background-color: #f3f0ff;
+    padding: 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* --- Стили для кнопок --- */
+.btn-primary {
+    width: 100%;
+    background-color: var(--orange);
+    color: var(--white);
+    border: none;
+    padding: 18px;
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-primary:hover {
+    background-color: #e66e00;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(255, 122, 0, 0.3);
+}
+.btn-primary:active {
+    transform: translateY(-1px);
+}
+.btn-secondary {
+    background: none;
+    border: none;
+    color: var(--text-grey);
+    font-weight: 700;
+    cursor: pointer;
+    padding: 14px 20px;
+    transition: color 0.2s;
+}
+.btn-secondary:hover {
+    color: var(--text-dark);
+}
+.btn-gradient {
+    background: linear-gradient(90deg, var(--purple-light), var(--purple-dark));
+    color: white;
+    border: none;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(122, 90, 245, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(122, 90, 245, 0.4);
+}
+/* --- Стили для модального окна загрузки --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(157, 125, 250, 0.15);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0; /* Изначально прозрачное */
+    pointer-events: none; /* Не реагирует на клики, когда скрыто */
+    transition: opacity 0.3s ease;
+}
+.modal-overlay.active {
+    opacity: 1; /* Показываем */
+    pointer-events: all; /* Реагирует на клики */
+}
+.modal-content {
+    background-color: var(--white);
+    width: 90%;
+    max-width: 500px;
+    border-radius: 32px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    transform: translateY(20px); /* Слегка сдвинуто вниз */
+    opacity: 0; /* Изначально прозрачное */
+    transition: all 0.3s ease;
+}
+.modal-overlay.active .modal-content {
+    transform: translateY(0); /* Поднимается на место */
+    opacity: 1;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+.modal-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+.close-modal-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-grey);
+    transition: color 0.2s;
+}
+.close-modal-btn:hover {
+    color: var(--purple-dark);
+}
+.drop-zone {
+    border: 2px dashed var(--border-gray);
+    border-radius: 20px;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative; /* Для input file */
+    overflow: hidden; /* Скрыть input file */
+}
+.drop-zone:hover {
+    border-color: var(--purple-light);
+    background-color: rgba(157, 125, 250, 0.02);
+}
+.drop-zone i {
+    width: 40px;
+    height: 40px;
+    color: var(--purple-light);
+}
+.drop-zone p {
+    color: var(--text-grey);
+    font-size: 14px;
+    font-weight: 600;
+}
+.drop-zone input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+}
+/* --- Стили для решателя заданий --- */
+.solver-tasks-container {
+    background-color: var(--white);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+.task-item {
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-gray);
+}
+.task-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.task-item h4 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 15px;
+}
+.task-image-container {
+    margin-bottom: 15px;
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 100%; /* Для респонсивности */
+}
+.task-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+.task-canvas {
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    background-color: #fcfcfc;
+    cursor: crosshair;
+    display: block; /* Убирает лишние отступы под canvas */
+}
+.task-answer-input {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    font-size: 16px;
+    margin-top: 10px;
+}
+.task-answer-input:focus {
+    outline: none;
+    border-color: var(--purple-light);
+}
+.solver-actions {
+    background-color: var(--white);
+    border-radius: 16px;
+    padding: 20px 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.03);
+    position: sticky; /* Прилипает к верху/низу */
+    bottom: 20px; /* Отступ от низа */
+    z-index: 10;
+}
+
+/* Стили для карточек заданий */
+.task-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.task-text {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.answer-container {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.answer-container input:focus {
+    outline: none;
+    border-color: #9d7dfa;
+    box-shadow: 0 0 0 3px rgba(157, 125, 250, 0.1);
+}
+
+
+
+
+/* Стили для контейнера результатов
+#results-container {
+    /* Стили уже добавлены инлайном в HTML, но можно их перенести сюда */
+    /* background-color: var(--white); */
+    /* border-radius: 16px; */
+    /* box-shadow: 0 5px 20px rgba(0,0,0,0.03); */
+    /* padding: 20px; */
