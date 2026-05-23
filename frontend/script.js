@@ -181,7 +181,7 @@ function renderTasks(tasks) {
   $('solver-progress').textContent = `${tasks.length} заданий`;
   const list = $('tasks-list');
   list.innerHTML = '';
-  tasks.sort((a, b) => a.id - b.id).forEach(t => list.appendChild(buildCard(t)));
+  tasks.forEach(t => list.appendChild(buildCard(t)));
 }
 
 // ─── КАРТОЧКА ЗАДАНИЯ ────────────────────────────────────────
@@ -193,7 +193,12 @@ function buildCard(task) {
   // Шапка
   const head = document.createElement('div');
   head.className = 'task-card-head';
-  head.innerHTML = `<span class="task-num">Задание ${task.id}</span><span class="task-type-badge">${esc(task.type_name || '')}</span>`;
+  if (task.is_text) {
+    const label = task.id === 0 ? 'Текст для заданий 1–3' : 'Текст для заданий 23–26';
+    head.innerHTML = `<span class="task-num text-label">${label}</span>`;
+  } else {
+    head.innerHTML = `<span class="task-num">Задание ${task.id}</span><span class="task-type-badge">${esc(task.type_name || '')}</span>`;
+  }
   card.appendChild(head);
 
   // ── Область изображения + canvas поверх ──────────────────
@@ -227,18 +232,20 @@ function buildCard(task) {
 
   initDraw(canvas);
 
-  // ── Поле ответа ──────────────────────────────────────────
-  const answerWrap = document.createElement('div');
-  answerWrap.className = 'task-answer-wrap';
-  answerWrap.innerHTML = `
-    <label class="answer-label" for="ans-${task.id}">Ответ</label>
-    <input class="answer-input" id="ans-${task.id}" type="text"
-           placeholder="Введите ответ…" autocomplete="off" data-id="${task.id}" />
-    <div class="answer-feedback" id="fb-${task.id}"></div>`;
-  answerWrap.querySelector('input').addEventListener('input', e => {
-    state.answers[String(task.id)] = e.target.value.trim();
-  });
-  card.appendChild(answerWrap);
+  // ── Поле ответа (только для заданий, не для текстов) ──────
+  if (!task.is_text) {
+    const answerWrap = document.createElement('div');
+    answerWrap.className = 'task-answer-wrap';
+    answerWrap.innerHTML = `
+      <label class="answer-label" for="ans-${task.id}">Ответ</label>
+      <input class="answer-input" id="ans-${task.id}" type="text"
+             placeholder="Введите ответ…" autocomplete="off" data-id="${task.id}" />
+      <div class="answer-feedback" id="fb-${task.id}"></div>`;
+    answerWrap.querySelector('input').addEventListener('input', e => {
+      state.answers[String(task.id)] = e.target.value.trim();
+    });
+    card.appendChild(answerWrap);
+  }
 
   return card;
 }
