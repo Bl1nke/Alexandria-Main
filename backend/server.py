@@ -139,22 +139,37 @@ def get_variant_details(variant_id):
 
     try:
         # Читаем метаданные каждого задания
-        meta_files = sorted([
+        meta_files = [
             f for f in os.listdir(tasks_dir)
             if f.startswith('task_') and f.endswith('_meta.json')
-        ], key=lambda x: int(re.search(r'task_(\d+)_meta', x).group(1))
-        if re.search(r'task_(\d+)_meta', x) else 0)
+        ]
+
+        # Порядок: Текст1(0), задания 1-22, Текст2(-1), задания 23-27
+        ORDER = [0] + list(range(1, 23)) + [-1] + list(range(23, 28))
+
+        def sort_key(fname):
+            m = re.search(r'task_(-?\d+)_meta', fname)
+            if not m:
+                return 999
+            num = int(m.group(1))
+            try:
+                return ORDER.index(num)
+            except ValueError:
+                return 999
+
+        meta_files = sorted(meta_files, key=sort_key)
 
         tasks = []
         for fname in meta_files:
             with open(os.path.join(tasks_dir, fname), 'r', encoding='utf-8') as f:
                 meta = json.load(f)
             tasks.append({
-                'id':        meta['id'],
-                'type':      meta.get('type', 'unknown'),
-                'type_name': meta.get('type_name', 'Задание'),
-                'text':      meta.get('text', ''),
-                'image_url': f'uploads/{variant_id}/tasks/{meta["image_file"]}',
+                'id':         meta['id'],
+                'display_id': meta.get('display_id', str(meta['id'])),
+                'type':       meta.get('type', 'unknown'),
+                'type_name':  meta.get('type_name', 'Задание'),
+                'image_url':  f'uploads/{variant_id}/tasks/{meta["image_file"]}',
+                'is_text':    meta.get('is_text', False),
             })
 
         return jsonify({'id': variant_id, 'tasks': tasks})
