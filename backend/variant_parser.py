@@ -18,6 +18,7 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple
 
+import fitz
 import pdfplumber
 from PIL import Image
 
@@ -95,6 +96,8 @@ TASK_NAMES = {
 
 TOP_MARGIN = 8
 BOTTOM_MARGIN = 4
+DPI = 140
+DRAWING_SPACE_PX = 180
 TASK_NUMBERS = set(range(1, 28))
 
 
@@ -161,10 +164,11 @@ def _parse_answers_docx(path: str) -> Dict[str, str]:
 
 
 def _crop(
+    fitz_doc,
     page,
     y0: float,
     y1: float,
-    dpi: int = 150,
+    dpi: int = DPI,
     top_margin: int = TOP_MARGIN,
     bottom_margin: int = BOTTOM_MARGIN,
 ) -> bytes:
@@ -176,15 +180,21 @@ def _crop(
     if y1 <= y0:
         y1 = min(height, y0 + 1)
 
-    cropped = page.within_bbox((0, y0, width, y1))
-    img = cropped.to_image(resolution=dpi)
+    fitz_page = fitz_doc[page.page_number - 1]
+    clip = fitz.Rect(0, y0, width, y1)
+    matrix = fitz.Matrix(dpi / 72, dpi / 72)
+    pix = fitz_page.get_pixmap(matrix=matrix, clip=clip, alpha=False)
+    img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
 
 
-def _full_page(page, dpi: int = 150) -> bytes:
-    img = page.to_image(resolution=dpi)
+def _full_page(fitz_doc, page, dpi: int = DPI) -> bytes:
+    fitz_page = fitz_doc[page.page_number - 1]
+    matrix = fitz.Matrix(dpi / 72, dpi / 72)
+    pix = fitz_page.get_pixmap(matrix=matrix, alpha=False)
+    img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
@@ -275,6 +285,16 @@ def _compact_vertical_whitespace(data: bytes, threshold: int = 248, max_blank: i
 
     buf = io.BytesIO()
     compact.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def _add_bottom_drawing_space(data: bytes, height: int = DRAWING_SPACE_PX) -> bytes:
+    image = Image.open(io.BytesIO(data)).convert("RGB")
+    out = Image.new("RGB", (image.width, image.height + height), "white")
+    out.paste(image, (0, 0))
+
+    buf = io.BytesIO()
+    out.save(buf, "PNG")
     return buf.getvalue()
 
 
@@ -375,6 +395,19 @@ def _find_answer_line_after(pdf, page_start: int, y_start: float, page_end: int,
     return None
 
 
+def _task_end_before_next_marker(
+    pdf,
+    start_page: int,
+    start_y: float,
+    next_page: int,
+    next_y: float,
+) -> Tuple[int, float]:
+    answer_end = _find_answer_line_after(pdf, start_page, start_y, next_page, next_y)
+    if answer_end:
+        return answer_end
+    return next_page, next_y
+
+
 def _find_numbered_text_start_between(
     pdf,
     page_start: int,
@@ -398,6 +431,7 @@ def _find_numbered_text_start_between(
 
 
 def _cut_range(
+    fitz_doc,
     pdf,
     start_page: int,
     start_y: float,
@@ -406,20 +440,20 @@ def _cut_range(
     end_margin: int = BOTTOM_MARGIN,
 ) -> bytes:
     if start_page == end_page:
-        return _crop(pdf.pages[start_page], start_y, end_y, bottom_margin=end_margin)
+        return _crop(fitz_doc, pdf.pages[start_page], start_y, end_y, bottom_margin=end_margin)
 
-    parts = [_crop(pdf.pages[start_page], start_y, float(pdf.pages[start_page].height))]
+    parts = [_crop(fitz_doc, pdf.pages[start_page], start_y, float(pdf.pages[start_page].height))]
     for page_index in range(start_page + 1, end_page):
-        parts.append(_full_page(pdf.pages[page_index]))
-    parts.append(_crop(pdf.pages[end_page], 0.0, end_y, top_margin=0, bottom_margin=end_margin))
+        parts.append(_full_page(fitz_doc, pdf.pages[page_index]))
+    parts.append(_crop(fitz_doc, pdf.pages[end_page], 0.0, end_y, top_margin=0, bottom_margin=end_margin))
     return _vstack(parts)
 
 
 def extract_task_images_pdf(path: str) -> Dict[int, bytes]:
-    with pdfplumber.open(path) as pdf:
+    with pdfplumber.open(path) as pdf, fitz.open(path) as fitz_doc:
         marks = _find_task_markers(pdf)
         if not marks:
-            return {i: _full_page(page) for i, page in enumerate(pdf.pages, 1)}
+            return {i: _full_page(fitz_doc, page) for i, page in enumerate(pdf.pages, 1)}
 
         if len(marks) < 27:
             found = ", ".join(str(num) for num, _, _ in marks)
@@ -429,7 +463,7 @@ def extract_task_images_pdf(path: str) -> Dict[int, bytes]:
         task_images: Dict[int, bytes] = {}
 
         task1_page, task1_y = by_num[1]
-        text1_image = _cut_range(pdf, 0, 0.0, task1_page, task1_y, end_margin=0)
+        text1_image = _cut_range(fitz_doc, pdf, 0, 0.0, task1_page, task1_y, end_margin=0)
 
         task22_page, task22_y = by_num[22]
         task23_page, task23_y = by_num[23]
@@ -439,25 +473,24 @@ def extract_task_images_pdf(path: str) -> Dict[int, bytes]:
 
         for num in range(1, 23):
             start_page, start_y = by_num[num]
-            end_page, end_y = by_num[num + 1] if num < 22 else by_num[23]
+            next_page, next_y = by_num[num + 1] if num < 22 else text2_start
+            end_page, end_y = _task_end_before_next_marker(pdf, start_page, start_y, next_page, next_y)
 
-            if num == 22:
-                end_page, end_y = text2_start
-
-            task_image = _cut_range(pdf, start_page, start_y, end_page, end_y)
+            task_image = _cut_range(fitz_doc, pdf, start_page, start_y, end_page, end_y, end_margin=0)
             task_images[num] = _vstack([text1_image, task_image]) if num in (1, 2, 3) else task_image
 
         text2_start_page, text2_start_y = text2_start
-        text2_image = _cut_range(pdf, text2_start_page, text2_start_y, task23_page, task23_y, end_margin=0)
+        text2_image = _cut_range(fitz_doc, pdf, text2_start_page, text2_start_y, task23_page, task23_y, end_margin=0)
 
         for num in range(23, 28):
             start_page, start_y = by_num[num]
             if num < 27:
-                end_page, end_y = by_num[num + 1]
+                next_page, next_y = by_num[num + 1]
+                end_page, end_y = _task_end_before_next_marker(pdf, start_page, start_y, next_page, next_y)
             else:
                 end_page = len(pdf.pages) - 1
                 end_y = float(pdf.pages[end_page].height)
-            task_image = _cut_range(pdf, start_page, start_y, end_page, end_y)
+            task_image = _cut_range(fitz_doc, pdf, start_page, start_y, end_page, end_y, end_margin=0)
             task_images[num] = _vstack([text2_image, task_image]) if num in (23, 24, 25, 26) else task_image
 
         return task_images
@@ -545,6 +578,7 @@ def process_variant(variant_path: str, answers_path: str, tasks_dir: str) -> int
     saved_count = 0
     for task_id in ordered_ids:
         img_bytes = _compact_vertical_whitespace(task_images[task_id])
+        img_bytes = _add_bottom_drawing_space(img_bytes)
         image_file = f"task_{task_id}.png"
         image_path = os.path.join(tasks_dir, image_file)
         with open(image_path, "wb") as file:
