@@ -160,11 +160,18 @@ def _parse_answers_docx(path: str) -> Dict[str, str]:
     return answers
 
 
-def _crop(page, y0: float, y1: float, dpi: int = 150) -> bytes:
+def _crop(
+    page,
+    y0: float,
+    y1: float,
+    dpi: int = 150,
+    top_margin: int = TOP_MARGIN,
+    bottom_margin: int = BOTTOM_MARGIN,
+) -> bytes:
     width = float(page.width)
     height = float(page.height)
-    y0 = max(0.0, y0 - TOP_MARGIN)
-    y1 = min(height, y1 + BOTTOM_MARGIN)
+    y0 = max(0.0, y0 - top_margin)
+    y1 = min(height, y1 + bottom_margin)
 
     if y1 <= y0:
         y1 = min(height, y0 + 1)
@@ -187,7 +194,7 @@ def _vstack(parts: List[bytes]) -> bytes:
     if len(parts) == 1:
         return parts[0]
 
-    images = [Image.open(io.BytesIO(part)).convert("RGB") for part in parts]
+    images = [_trim_vertical_whitespace(Image.open(io.BytesIO(part)).convert("RGB")) for part in parts]
     width = max(img.width for img in images)
     height = sum(img.height for img in images)
     out = Image.new("RGB", (width, height), "white")
@@ -199,6 +206,75 @@ def _vstack(parts: List[bytes]) -> bytes:
 
     buf = io.BytesIO()
     out.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def _trim_vertical_whitespace(image: Image.Image, threshold: int = 248, padding: int = 14) -> Image.Image:
+    pixels = image.convert("L")
+    width, height = pixels.size
+    top = 0
+    bottom = height - 1
+
+    def row_has_ink(y: int) -> bool:
+        for x in range(0, width, 4):
+            if pixels.getpixel((x, y)) < threshold:
+                return True
+        return False
+
+    while top < height and not row_has_ink(top):
+        top += 1
+    while bottom > top and not row_has_ink(bottom):
+        bottom -= 1
+
+    if top >= bottom:
+        return image
+
+    top = max(0, top - padding)
+    bottom = min(height - 1, bottom + padding)
+    return image.crop((0, top, width, bottom + 1))
+
+
+def _compact_vertical_whitespace(data: bytes, threshold: int = 248, max_blank: int = 70) -> bytes:
+    image = Image.open(io.BytesIO(data)).convert("RGB")
+    gray = image.convert("L")
+    width, height = gray.size
+    rows_to_keep: List[int] = []
+    blank_run: List[int] = []
+
+    def row_has_ink(y: int) -> bool:
+        for x in range(0, width, 4):
+            if gray.getpixel((x, y)) < threshold:
+                return True
+        return False
+
+    def flush_blank_run() -> None:
+        if not blank_run:
+            return
+        if len(blank_run) <= max_blank:
+            rows_to_keep.extend(blank_run)
+        else:
+            keep = max_blank // 2
+            rows_to_keep.extend(blank_run[:keep])
+            rows_to_keep.extend(blank_run[-(max_blank - keep):])
+        blank_run.clear()
+
+    for y in range(height):
+        if row_has_ink(y):
+            flush_blank_run()
+            rows_to_keep.append(y)
+        else:
+            blank_run.append(y)
+    flush_blank_run()
+
+    if len(rows_to_keep) == height:
+        return data
+
+    compact = Image.new("RGB", (width, len(rows_to_keep)), "white")
+    for new_y, old_y in enumerate(rows_to_keep):
+        compact.paste(image.crop((0, old_y, width, old_y + 1)), (0, new_y))
+
+    buf = io.BytesIO()
+    compact.save(buf, "PNG")
     return buf.getvalue()
 
 
@@ -321,14 +397,21 @@ def _find_numbered_text_start_between(
     return None
 
 
-def _cut_range(pdf, start_page: int, start_y: float, end_page: int, end_y: float) -> bytes:
+def _cut_range(
+    pdf,
+    start_page: int,
+    start_y: float,
+    end_page: int,
+    end_y: float,
+    end_margin: int = BOTTOM_MARGIN,
+) -> bytes:
     if start_page == end_page:
-        return _crop(pdf.pages[start_page], start_y, end_y)
+        return _crop(pdf.pages[start_page], start_y, end_y, bottom_margin=end_margin)
 
     parts = [_crop(pdf.pages[start_page], start_y, float(pdf.pages[start_page].height))]
     for page_index in range(start_page + 1, end_page):
         parts.append(_full_page(pdf.pages[page_index]))
-    parts.append(_crop(pdf.pages[end_page], 0.0, end_y))
+    parts.append(_crop(pdf.pages[end_page], 0.0, end_y, top_margin=0, bottom_margin=end_margin))
     return _vstack(parts)
 
 
@@ -346,8 +429,7 @@ def extract_task_images_pdf(path: str) -> Dict[int, bytes]:
         task_images: Dict[int, bytes] = {}
 
         task1_page, task1_y = by_num[1]
-        text1_image = _cut_range(pdf, 0, 0.0, task1_page, task1_y)
-        task_images[0] = text1_image
+        text1_image = _cut_range(pdf, 0, 0.0, task1_page, task1_y, end_margin=0)
 
         task22_page, task22_y = by_num[22]
         task23_page, task23_y = by_num[23]
@@ -366,8 +448,7 @@ def extract_task_images_pdf(path: str) -> Dict[int, bytes]:
             task_images[num] = _vstack([text1_image, task_image]) if num in (1, 2, 3) else task_image
 
         text2_start_page, text2_start_y = text2_start
-        text2_image = _cut_range(pdf, text2_start_page, text2_start_y, task23_page, task23_y)
-        task_images[-1] = text2_image
+        text2_image = _cut_range(pdf, text2_start_page, text2_start_y, task23_page, task23_y, end_margin=0)
 
         for num in range(23, 28):
             start_page, start_y = by_num[num]
@@ -458,15 +539,16 @@ def process_variant(variant_path: str, answers_path: str, tasks_dir: str) -> int
     task_images = extract_task_images(variant_path)
     answers = parse_answers(answers_path)
 
-    ordered_ids = [0] + list(range(1, 23)) + [-1] + list(range(23, 28))
+    ordered_ids = list(range(1, 28))
     ordered_ids = [task_id for task_id in ordered_ids if task_id in task_images]
 
     saved_count = 0
     for task_id in ordered_ids:
+        img_bytes = _compact_vertical_whitespace(task_images[task_id])
         image_file = f"task_{task_id}.png"
         image_path = os.path.join(tasks_dir, image_file)
         with open(image_path, "wb") as file:
-            file.write(task_images[task_id])
+            file.write(img_bytes)
 
         task_type = TASK_TYPES.get(task_id, "unknown")
         if task_id == 0:
