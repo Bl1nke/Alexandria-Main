@@ -270,8 +270,13 @@ function makeToolbar(canvas, imgArea) {
 
   const COLORS = ['#e74c3c','#1a1814','#2980b9','#27ae60'];
   canvas._color = COLORS[0];
-  canvas._size  = 3;
+  canvas._size  = 5;
   canvas._mode  = 'pen'; // 'pen' | 'eraser'
+
+  const toolsLeft = document.createElement('div');
+  toolsLeft.className = 'tb-group tb-group-left';
+  const toolsRight = document.createElement('div');
+  toolsRight.className = 'tb-group tb-group-right';
 
   // Цвета
   COLORS.forEach(c => {
@@ -286,13 +291,12 @@ function makeToolbar(canvas, imgArea) {
       dot.classList.add('active');
       tb.querySelector('.tb-eraser').classList.remove('active');
     });
-    tb.appendChild(dot);
+    toolsLeft.appendChild(dot);
   });
 
   // Разделитель
   const sep = document.createElement('div');
   sep.className = 'tb-sep';
-  tb.appendChild(sep);
 
   // Размер пера
   const sizes = [{ label: '·', v: 2 }, { label: '—', v: 5 }, { label: '━', v: 10 }];
@@ -306,31 +310,51 @@ function makeToolbar(canvas, imgArea) {
       tb.querySelectorAll('.tb-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
-    tb.appendChild(btn);
+    toolsLeft.appendChild(btn);
   });
 
-  const sep2 = document.createElement('div'); sep2.className = 'tb-sep'; tb.appendChild(sep2);
+  const sizeWrap = document.createElement('label');
+  sizeWrap.className = 'tb-size';
+  sizeWrap.title = 'РўРѕР»С‰РёРЅР° Р»РёРЅРёРё';
+  sizeWrap.innerHTML = `
+    <span class="tb-size-preview"></span>
+    <input class="tb-size-slider" type="range" min="1" max="16" value="${canvas._size}" aria-label="РўРѕР»С‰РёРЅР° Р»РёРЅРёРё" />
+  `;
+  const sizePreview = sizeWrap.querySelector('.tb-size-preview');
+  const sizeSlider = sizeWrap.querySelector('.tb-size-slider');
+  function updateSizePreview() {
+    const size = Number(sizeSlider.value);
+    canvas._size = size;
+    sizePreview.style.height = `${Math.max(2, size)}px`;
+  }
+  sizeSlider.addEventListener('input', updateSizePreview);
+  updateSizePreview();
+  toolsLeft.appendChild(sizeWrap);
 
   // Ластик
   const eraser = document.createElement('button');
-  eraser.className = 'tb-eraser tb-btn';
+  eraser.className = 'tb-eraser tb-btn tb-icon-btn';
   eraser.textContent = '⌫';
   eraser.title = 'Ластик';
   eraser.addEventListener('click', () => {
     canvas._mode = canvas._mode === 'eraser' ? 'pen' : 'eraser';
     eraser.classList.toggle('active', canvas._mode === 'eraser');
   });
-  tb.appendChild(eraser);
+  toolsRight.appendChild(eraser);
 
   // Очистить
   const clear = document.createElement('button');
-  clear.className = 'tb-btn';
+  clear.className = 'tb-btn tb-icon-btn tb-clear';
   clear.textContent = '✕';
   clear.title = 'Очистить';
   clear.addEventListener('click', () => {
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
   });
-  tb.appendChild(clear);
+  toolsRight.appendChild(clear);
+
+  tb.appendChild(toolsLeft);
+  tb.appendChild(sep);
+  tb.appendChild(toolsRight);
 
   return tb;
 }

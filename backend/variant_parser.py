@@ -2,9 +2,7 @@
 Parser for EGE variant files.
 
 Expected NeoFamily-like structure:
-  - Text 1 before task 1
   - Tasks 1-22
-  - Text 2 after task 22 and before task 23
   - Tasks 23-27
 
 The important part is marker detection. A variant contains many numbered
@@ -474,7 +472,10 @@ def extract_task_images_pdf(path: str) -> Dict[int, bytes]:
         for num in range(1, 23):
             start_page, start_y = by_num[num]
             next_page, next_y = by_num[num + 1] if num < 22 else text2_start
-            end_page, end_y = _task_end_before_next_marker(pdf, start_page, start_y, next_page, next_y)
+            if num in (8, 22):
+                end_page, end_y = next_page, next_y
+            else:
+                end_page, end_y = _task_end_before_next_marker(pdf, start_page, start_y, next_page, next_y)
 
             task_image = _cut_range(fitz_doc, pdf, start_page, start_y, end_page, end_y, end_margin=0)
             task_images[num] = _vstack([text1_image, task_image]) if num in (1, 2, 3) else task_image
