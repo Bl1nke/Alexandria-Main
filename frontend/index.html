@@ -11,7 +11,45 @@
 </head>
 <body>
 
-<div id="screen-list" class="screen active">
+<div id="screen-auth" class="screen active">
+  <header class="app-header auth-header">
+    <div class="logo">
+      <span class="logo-icon" aria-hidden="true">A</span>
+      <span class="logo-text">Alexandria</span>
+    </div>
+    <nav class="header-nav">
+      <span class="nav-hint">Подготовка к ЕГЭ</span>
+    </nav>
+  </header>
+
+  <main class="auth-main">
+    <section class="auth-panel" aria-labelledby="auth-title">
+      <div class="auth-copy">
+        <p class="hero-kicker">Учебное пространство</p>
+        <h1 class="auth-title" id="auth-title">Вход в Alexandria</h1>
+        <p class="auth-sub">Загрузите варианты, решайте задания и проверяйте ответы в спокойном рабочем интерфейсе.</p>
+      </div>
+
+      <div class="auth-form" aria-label="Вход и регистрация">
+        <label class="auth-field">
+          <span>Email</span>
+          <input class="auth-input" type="email" placeholder="student@example.com" autocomplete="email" />
+        </label>
+        <label class="auth-field">
+          <span>Пароль</span>
+          <input class="auth-input" type="password" placeholder="Введите пароль" autocomplete="current-password" />
+        </label>
+
+        <button class="btn-auth-primary" id="btn-auth-login">Войти</button>
+        <button class="btn-auth-secondary" id="btn-auth-register">Зарегистрироваться</button>
+
+        <p class="auth-note">Регистрация пока работает в демо-режиме: обе кнопки открывают основной функционал.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="screen-list" class="screen hidden">
   <header class="app-header">
     <div class="logo">
       <span class="logo-icon" aria-hidden="true">A</span>
