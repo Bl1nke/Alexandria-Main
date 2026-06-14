@@ -476,6 +476,13 @@ function esc(value) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  function enterApp() {
+    showScreen('list');
+    loadVariants();
+  }
+
+  $('btn-auth-login').addEventListener('click', enterApp);
+  $('btn-auth-register').addEventListener('click', enterApp);
   $('btn-open-upload').addEventListener('click', openModal);
   $('btn-close-upload').addEventListener('click', closeModal);
   $('btn-cancel-upload').addEventListener('click', closeModal);
@@ -498,6 +505,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadVariants();
   });
 
-  showScreen('list');
-  loadVariants();
+  showScreen('auth');
 });
