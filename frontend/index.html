@@ -11,7 +11,69 @@
 </head>
 <body>
 
-<div id="screen-auth" class="screen active">
+<div id="screen-dashboard" class="screen active">
+  <header class="app-header dashboard-header">
+    <div class="logo">
+      <span class="logo-icon" aria-hidden="true">A</span>
+      <span class="logo-text">Alexandria</span>
+    </div>
+    <nav class="header-nav" aria-label="Раздел обучения">
+      <span class="nav-hint">Подготовка к ЕГЭ</span>
+      <svg class="nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <h1 class="dashboard-greeting">Здравствуйте, <span>Username</span>,<br>самое время, чтобы сделать учеников лучше!</h1>
+
+    <div class="dashboard-grid">
+      <section class="dashboard-card recent-card" aria-labelledby="recent-title">
+        <div class="dashboard-card-heading">
+          <span class="dashboard-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          </span>
+          <h2 id="recent-title">Новые варианты для проверки</h2>
+        </div>
+        <div class="recent-variants" id="recent-variants"></div>
+        <button class="dashboard-action dashboard-full-list" id="btn-open-all">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>
+          <span>Открыть полный список</span>
+          <svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </section>
+
+      <div class="dashboard-side">
+        <section class="dashboard-card search-card" aria-labelledby="search-title">
+          <div class="dashboard-card-heading">
+            <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.2" y1="16.2" x2="21" y2="21"/></svg></span>
+            <h2 id="search-title">Поиск</h2>
+          </div>
+          <form class="dashboard-search" id="dashboard-search-form">
+            <input id="dashboard-search-input" type="search" placeholder="Поиск по номеру или теме..." aria-label="Поиск вариантов">
+            <button type="submit" aria-label="Найти"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.2" y1="16.2" x2="21" y2="21"/></svg></button>
+          </form>
+        </section>
+
+        <div class="dashboard-mini-cards">
+          <section class="dashboard-card mini-card">
+            <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg></span>
+            <h2>Добавить<br>новый вариант</h2>
+            <p>Создайте новый вариант<br>для ваших учеников.</p>
+            <button class="dashboard-action" id="btn-dashboard-create"><span>Создать</span><svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+          </section>
+          <section class="dashboard-card mini-card">
+            <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+            <h2>Профиль</h2>
+            <p>Настройте профиль<br>и отслеживайте<br>свой прогресс.</p>
+            <button class="dashboard-action" id="btn-dashboard-profile"><span>Перейти в профиль</span><svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="screen-auth" class="screen hidden">
   <header class="app-header auth-header">
     <div class="logo">
       <span class="logo-icon" aria-hidden="true">A</span>
@@ -43,7 +105,62 @@
         <button class="btn-auth-primary" id="btn-auth-login">Войти</button>
         <button class="btn-auth-secondary" id="btn-auth-register">Зарегистрироваться</button>
 
-        <p class="auth-note">Регистрация пока работает в демо-режиме: обе кнопки открывают основной функционал.</p>
+        <p class="auth-note">Логика входа пока работает в демо-режиме: кнопка входа открывает основной функционал.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="screen-register" class="screen hidden">
+  <header class="app-header auth-header">
+    <div class="logo">
+      <span class="logo-icon" aria-hidden="true">A</span>
+      <span class="logo-text">Alexandria</span>
+    </div>
+    <nav class="header-nav">
+      <span class="nav-hint">Регистрация</span>
+    </nav>
+  </header>
+
+  <main class="auth-main">
+    <section class="auth-panel register-panel" aria-labelledby="register-title">
+      <div class="auth-copy">
+        <p class="hero-kicker">Новый профиль</p>
+        <h1 class="auth-title" id="register-title">Кто вы в Alexandria?</h1>
+        <p class="auth-sub">Выберите роль, чтобы позже открыть нужные инструменты для учебы и преподавания.</p>
+      </div>
+
+      <div class="auth-form register-form" aria-label="Форма регистрации">
+        <div class="role-group" role="radiogroup" aria-label="Роль пользователя">
+          <label class="role-card">
+            <input type="radio" name="register-role" value="student" checked />
+            <span class="role-card-title">Ученик</span>
+            <span class="role-card-text">Решать варианты, вносить ответы и видеть результаты.</span>
+          </label>
+          <label class="role-card">
+            <input type="radio" name="register-role" value="teacher" />
+            <span class="role-card-title">Учитель</span>
+            <span class="role-card-text">Загружать материалы и готовить варианты для проверки.</span>
+          </label>
+        </div>
+
+        <label class="auth-field">
+          <span>Email</span>
+          <input class="auth-input" type="email" placeholder="name@example.com" autocomplete="email" />
+        </label>
+        <label class="auth-field">
+          <span>Пароль</span>
+          <input class="auth-input" type="password" placeholder="Придумайте пароль" autocomplete="new-password" />
+        </label>
+        <label class="auth-field">
+          <span>Повторите пароль</span>
+          <input class="auth-input" type="password" placeholder="Повторите пароль" autocomplete="new-password" />
+        </label>
+
+        <button class="btn-auth-primary" id="btn-register-submit">Создать профиль</button>
+        <button class="btn-auth-secondary" id="btn-register-back">Уже есть аккаунт</button>
+
+        <p class="auth-note">Пока это только интерфейс: после нажатия профиль не сохраняется.</p>
       </div>
     </section>
   </main>

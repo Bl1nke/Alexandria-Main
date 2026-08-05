@@ -23,9 +23,14 @@ const state = {
   variantId: null,
   variantName: '',
   answers: {},
+  searchQuery: '',
 };
 
 const $ = id => document.getElementById(id);
+
+function isUploadModalOpen() {
+  return !$('modal-upload').classList.contains('hidden');
+}
 
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(screen => {
@@ -44,10 +49,16 @@ function openModal() {
     $(`input-${key}`).value = '';
   });
   $('modal-upload').classList.remove('hidden');
+  if (history.state?.modal !== 'upload') {
+    history.pushState({ ...history.state, modal: 'upload' }, '');
+  }
 }
 
-function closeModal() {
+function closeModal(fromHistory = false) {
   $('modal-upload').classList.add('hidden');
+  if (!fromHistory && history.state?.modal === 'upload') {
+    history.back();
+  }
 }
 
 function setupDrop(zoneId, inputId, nameId, key) {
@@ -130,15 +141,19 @@ async function loadVariants() {
 
 function renderList(list) {
   const grid = $('variants-grid');
+  const query = state.searchQuery.trim().toLowerCase();
+  const visibleList = query
+    ? list.filter(variant => variant.name.toLowerCase().includes(query) || String(variant.id).includes(query))
+    : list;
   grid.querySelectorAll('.variant-card').forEach(card => card.remove());
   const empty = $('empty-state');
-  empty.classList.toggle('hidden', list.length > 0);
-  if (!list.length) {
-    empty.querySelector('p').textContent = 'Вариантов пока нет.\nЗагрузите первый файл для проверки.';
+  empty.classList.toggle('hidden', visibleList.length > 0);
+  if (!visibleList.length) {
+    empty.querySelector('p').textContent = query ? 'Ничего не найдено.' : 'Вариантов пока нет.\nЗагрузите первый файл для проверки.';
     return;
   }
 
-  list.forEach(variant => {
+  visibleList.forEach(variant => {
     const card = document.createElement('div');
     card.className = 'variant-card';
     card.innerHTML = `
@@ -161,6 +176,30 @@ function renderList(list) {
     card.querySelector('.btn-delete').addEventListener('click', () => deleteVariant(variant.id, card));
     grid.appendChild(card);
   });
+}
+
+async function loadDashboard() {
+  const container = $('recent-variants');
+  container.innerHTML = '<p class="dashboard-empty">Загрузка вариантов...</p>';
+  try {
+    const res = await apiFetch(`${API}/variants`);
+    const list = await res.json();
+    const recent = list.slice(0, 2);
+    if (!recent.length) {
+      container.innerHTML = '<p class="dashboard-empty">Новых вариантов пока нет.</p>';
+      return;
+    }
+    container.innerHTML = '';
+    recent.forEach(variant => {
+      const button = document.createElement('button');
+      button.className = 'recent-variant';
+      button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg><span class="recent-variant-name">${esc(variant.name)}</span><svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+      button.addEventListener('click', () => startSolver(variant.id, variant.name));
+      container.appendChild(button);
+    });
+  } catch (e) {
+    container.innerHTML = `<p class="dashboard-empty">${esc(e.message)}</p>`;
+  }
 }
 
 async function deleteVariant(id, card) {
@@ -483,11 +522,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btn-auth-login').addEventListener('click', enterApp);
   $('btn-auth-register').addEventListener('click', enterApp);
+  $('btn-open-all').addEventListener('click', enterApp);
+  $('btn-dashboard-create').addEventListener('click', openModal);
+  $('btn-dashboard-profile').addEventListener('click', () => showScreen('auth'));
+  $('dashboard-search-form').addEventListener('submit', event => {
+    event.preventDefault();
+    state.searchQuery = $('dashboard-search-input').value;
+    enterApp();
+  });
   $('btn-open-upload').addEventListener('click', openModal);
   $('btn-close-upload').addEventListener('click', closeModal);
   $('btn-cancel-upload').addEventListener('click', closeModal);
   $('modal-upload').addEventListener('click', event => {
     if (event.target === $('modal-upload')) closeModal();
+  });
+  window.addEventListener('popstate', () => {
+    if (isUploadModalOpen()) closeModal(true);
   });
 
   setupDrop('zone-variant', 'input-variant', 'name-variant', 'variant');
@@ -505,5 +555,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadVariants();
   });
 
-  showScreen('auth');
+  showScreen('dashboard');
+  loadDashboard();
 });
