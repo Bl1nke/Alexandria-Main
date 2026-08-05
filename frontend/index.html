@@ -11,16 +11,26 @@
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </symbol>
+  </defs>
+</svg>
+
 <div id="screen-dashboard" class="screen active">
   <header class="app-header dashboard-header">
     <div class="logo">
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav" aria-label="Раздел обучения">
-      <span class="nav-hint">Подготовка к ЕГЭ</span>
-      <svg class="nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-    </nav>
+    <div class="header-nav">
+      <button class="settings-btn" type="button" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="20" height="20" aria-hidden="true"><use href="#icon-settings"/></svg>
+      </button>
+    </div>
   </header>
 
   <main class="dashboard-main">
@@ -79,9 +89,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav">
-      <span class="nav-hint">Подготовка к ЕГЭ</span>
-    </nav>
+    <div class="header-nav">
+      <button class="settings-btn" type="button" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="20" height="20" aria-hidden="true"><use href="#icon-settings"/></svg>
+      </button>
+    </div>
   </header>
 
   <main class="auth-main">
@@ -117,9 +129,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav">
-      <span class="nav-hint">Регистрация</span>
-    </nav>
+    <div class="header-nav">
+      <button class="settings-btn" type="button" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="20" height="20" aria-hidden="true"><use href="#icon-settings"/></svg>
+      </button>
+    </div>
   </header>
 
   <main class="auth-main">
@@ -172,9 +186,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav">
-      <span class="nav-hint">Подготовка к ЕГЭ</span>
-    </nav>
+    <div class="header-nav">
+      <button class="settings-btn" type="button" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="20" height="20" aria-hidden="true"><use href="#icon-settings"/></svg>
+      </button>
+    </div>
   </header>
 
   <main class="list-main">
@@ -248,6 +264,9 @@
     </button>
     <span class="solver-title" id="solver-title">Вариант</span>
     <div class="solver-progress" id="solver-progress"></div>
+    <button class="settings-btn" type="button" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-expanded="false">
+      <svg width="20" height="20" aria-hidden="true"><use href="#icon-settings"/></svg>
+    </button>
   </header>
 
   <div id="tasks-list" class="tasks-list"></div>
@@ -280,6 +299,23 @@
 
       <button class="btn-ghost results-back" id="btn-results-back">Вернуться к списку</button>
     </div>
+  </div>
+</div>
+
+<div id="settings-menu" class="settings-menu hidden" role="dialog" aria-label="Настройки">
+  <div class="settings-head">
+    <svg width="15" height="15" aria-hidden="true"><use href="#icon-settings"/></svg>
+    <span>Настройки</span>
+  </div>
+  <div class="settings-row">
+    <div class="settings-row-copy">
+      <span class="settings-row-title">Тёмная тема</span>
+      <span class="settings-row-desc">Тёмное оформление всего интерфейса</span>
+    </div>
+    <label class="theme-switch">
+      <input type="checkbox" id="theme-toggle" aria-label="Тёмная тема" />
+      <span class="theme-switch-track"></span>
+    </label>
   </div>
 </div>
 
