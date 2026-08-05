@@ -33,12 +33,41 @@ function isUploadModalOpen() {
 }
 
 function showScreen(name) {
+  closeSettings();
   document.querySelectorAll('.screen').forEach(screen => {
     const isActive = screen.id === `screen-${name}`;
     screen.classList.toggle('active', isActive);
     screen.classList.toggle('hidden', !isActive);
   });
   window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// ─── Навигация с историей браузера ────────────────────────
+// go() — переход на экран с добавлением записи в history, чтобы
+// кнопка «назад» в браузере возвращала на предыдущий экран сайта.
+function go(next) {
+  const prev = history.state || {};
+  if (prev.screen === next.screen && prev.variantId === next.variantId) {
+    showScreen(next.screen);
+    return;
+  }
+  history.pushState(next, '');
+  showScreen(next.screen);
+}
+
+// Восстановление экрана по записи истории: вызывается при загрузке/
+// обновлении страницы (после F5) и при кнопках «назад»/«вперёд».
+function restoreScreenFromState() {
+  const state = history.state || {};
+  if (state.screen === 'list') { showScreen('list'); loadVariants(); }
+  else if (state.screen === 'solver') { startSolver(state.variantId, state.variantName, true); }
+  else if (state.screen === 'auth') { showScreen('auth'); }
+  else { showScreen('dashboard'); loadDashboard(); }
+}
+
+function restoreFromHistory() {
+  restoreScreenFromState();
+  if ((history.state || {}).modal === 'upload') openModal();
 }
 
 function openModal() {
@@ -213,7 +242,7 @@ async function deleteVariant(id, card) {
   }
 }
 
-async function startSolver(variantId, variantName) {
+async function startSolver(variantId, variantName, viaHistory = false) {
   state.variantId = variantId;
   state.variantName = variantName;
   state.answers = {};
@@ -221,7 +250,9 @@ async function startSolver(variantId, variantName) {
   $('solver-title').textContent = variantName;
   $('tasks-list').innerHTML = '<p class="loading-state">Загрузка...</p>';
   $('results-panel').classList.add('hidden');
-  showScreen('solver');
+
+  if (viaHistory) showScreen('solver');
+  else go({ screen: 'solver', variantId, variantName });
 
   try {
     const res = await apiFetch(`${API}/variants/${variantId}`);
@@ -514,9 +545,51 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
+// ─── Настройки и тема ─────────────────────────────────────
+const THEME_KEY = 'alexandria-theme';
+
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
+}
+
+function initTheme() {
+  let dark;
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    dark = stored !== null
+      ? stored === 'dark'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } catch (e) { dark = false; }
+  applyTheme(dark);
+  $('theme-toggle').checked = dark;
+}
+
+function openSettings(btn) {
+  const menu = $('settings-menu');
+  btn.setAttribute('aria-expanded', 'true');
+  const rect = btn.getBoundingClientRect();
+  const menuWidth = 300;
+  const menuHeight = 130;
+  let top = rect.bottom + 10;
+  if (top + menuHeight > window.innerHeight - 8) top = Math.max(8, rect.top - menuHeight - 10);
+  const left = Math.min(window.innerWidth - menuWidth - 8, Math.max(8, rect.right - menuWidth));
+  menu.style.top = `${Math.round(top)}px`;
+  menu.style.left = `${Math.round(left)}px`;
+  menu.classList.remove('hidden');
+}
+
+function closeSettings() {
+  const menu = $('settings-menu');
+  if (menu) {
+    menu.classList.add('hidden');
+    document.querySelectorAll('.settings-btn').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   function enterApp() {
-    showScreen('list');
+    go({ screen: 'list' });
     loadVariants();
   }
 
@@ -524,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-auth-register').addEventListener('click', enterApp);
   $('btn-open-all').addEventListener('click', enterApp);
   $('btn-dashboard-create').addEventListener('click', openModal);
-  $('btn-dashboard-profile').addEventListener('click', () => showScreen('auth'));
+  $('btn-dashboard-profile').addEventListener('click', () => go({ screen: 'auth' }));
   $('dashboard-search-form').addEventListener('submit', event => {
     event.preventDefault();
     state.searchQuery = $('dashboard-search-input').value;
@@ -537,7 +610,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.target === $('modal-upload')) closeModal();
   });
   window.addEventListener('popstate', () => {
-    if (isUploadModalOpen()) closeModal(true);
+    const state = history.state || {};
+    const modalOpen = isUploadModalOpen();
+
+    if (state.modal === 'upload' && !modalOpen) openModal();
+    else if (state.modal !== 'upload' && modalOpen) closeModal(true);
+
+    restoreScreenFromState();
   });
 
   setupDrop('zone-variant', 'input-variant', 'name-variant', 'variant');
@@ -545,16 +624,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btn-submit-upload').addEventListener('click', upload);
   $('btn-back').addEventListener('click', () => {
-    showScreen('list');
-    loadVariants();
+    if (history.state?.screen === 'solver') history.back();
+    else { showScreen('list'); loadVariants(); }
   });
   $('btn-submit-answers').addEventListener('click', submitAnswers);
   $('btn-results-back').addEventListener('click', () => {
     $('results-panel').classList.add('hidden');
-    showScreen('list');
-    loadVariants();
+    if (history.state?.screen === 'solver') history.back();
+    else { showScreen('list'); loadVariants(); }
   });
 
-  showScreen('dashboard');
-  loadDashboard();
+  initTheme();
+  $('theme-toggle').addEventListener('change', event => applyTheme(event.target.checked));
+
+  document.addEventListener('click', event => {
+    const menu = $('settings-menu');
+    const btn = event.target.closest('.settings-btn');
+    if (btn) {
+      if (menu.classList.contains('hidden')) openSettings(btn);
+      else closeSettings();
+      return;
+    }
+    if (!menu.classList.contains('hidden') && !event.target.closest('#settings-menu')) closeSettings();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeSettings();
+  });
+  window.addEventListener('resize', closeSettings);
+
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  restoreFromHistory();
 });
