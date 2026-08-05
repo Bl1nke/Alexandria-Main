@@ -515,6 +515,75 @@ function esc(value) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Dark mode initialization
+  const isDarkMode = localStorage.getItem('darkMode') === 'true';
+  if (isDarkMode) {
+    document.body.classList.add('dark-mode');
+  }
+  
+  // Sync all dark mode toggles with current state
+  const allToggles = [
+    $('dark-mode-toggle'),
+    $('dark-mode-toggle-auth'),
+    $('dark-mode-toggle-register'),
+    $('dark-mode-toggle-list')
+  ];
+  allToggles.forEach(toggle => {
+    if (toggle) toggle.checked = isDarkMode;
+  });
+
+  // Dark mode toggle function
+  function toggleDarkMode(isEnabled) {
+    document.body.classList.toggle('dark-mode', isEnabled);
+    localStorage.setItem('darkMode', isEnabled);
+    // Sync all toggles
+    allToggles.forEach(toggle => {
+      if (toggle && toggle.checked !== isEnabled) {
+        toggle.checked = isEnabled;
+      }
+    });
+  }
+
+  // Add event listeners to all dark mode toggles
+  allToggles.forEach(toggle => {
+    if (toggle) {
+      toggle.addEventListener('change', (e) => {
+        toggleDarkMode(e.target.checked);
+      });
+    }
+  });
+
+  // Settings menu toggle function
+  function setupSettingsMenu(btnId, menuId) {
+    const btn = $(btnId);
+    const menu = $(menuId);
+    if (!btn || !menu) return;
+    
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close other menus first
+      document.querySelectorAll('.settings-menu').forEach(m => {
+        if (m !== menu) m.classList.add('hidden');
+      });
+      menu.classList.toggle('hidden');
+    });
+  }
+
+  // Setup all settings menus
+  setupSettingsMenu('settings-btn', 'settings-menu');
+  setupSettingsMenu('settings-btn-auth', 'settings-menu-auth');
+  setupSettingsMenu('settings-btn-register', 'settings-menu-register');
+  setupSettingsMenu('settings-btn-list', 'settings-menu-list');
+
+  // Close menus when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.header-nav')) {
+      document.querySelectorAll('.settings-menu').forEach(menu => {
+        menu.classList.add('hidden');
+      });
+    }
+  });
+
   function enterApp() {
     showScreen('list');
     loadVariants();

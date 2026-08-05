@@ -1,32 +1,27 @@
-# === PYTHON ===
-__pycache__/
-*.py[cod]
-*.so
-.Python
-venv/
-env/
-.venv/
-ENV/
-*.egg-info/
+```
+# Dependencies
+node_modules/
+
+# Build artifacts
 dist/
 build/
-*.egg
+*.js.map
 
-# === IDE & РЕДАКТОРЫ ===
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
 .vscode/
 .idea/
+
+# Logs and temp files
+*.log
+*.tmp
 *.swp
-*.swo
-*~
+
+# OS generated files
 .DS_Store
 Thumbs.db
-
-# === ПРОЕКТНЫЕ ФАЙЛЫ ===
-backend/uploads/          # Папка с загруженными файлами и сгенерированными картинками (тяжёлая, не нужна в git)
-backend/variants_db.json  # База данных вариантов (создаётся автоматически при работе сервера)
-*.log
-.env                      # Секретные ключи и настройки окружения
-
-# === ОС ===
-.DS_Store                 # macOS
-desktop.ini               # Windows
+```

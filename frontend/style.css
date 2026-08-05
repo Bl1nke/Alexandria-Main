@@ -28,6 +28,77 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
+body.dark-mode {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-soft: #334155;
+  --surface-hover: #1e293b;
+  --border: #334155;
+  --border-strong: #475569;
+  --text: #f1f5f9;
+  --text-mid: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent: #3b82f6;
+  --accent-strong: #60a5fa;
+  --accent-soft: #1e3a5f;
+  --green: #22c55e;
+  --green-soft: #14532d;
+  --red: #ef4444;
+  --red-soft: #7f1d1d;
+  --ink: #f1f5f9;
+}
+body.dark-mode {
+  background: linear-gradient(180deg, rgba(30, 41, 59, .92), rgba(15, 23, 42, .96) 340px), var(--bg);
+}
+body.dark-mode .app-header {
+  background: rgba(30, 41, 59, .82);
+  border-bottom-color: rgba(51, 65, 85, .8);
+}
+body.dark-mode .dashboard-card,
+body.dark-mode .recent-variant,
+body.dark-mode .mini-card,
+body.dark-mode .search-card {
+  background: rgba(30, 41, 59, .86);
+  border-color: rgba(51, 65, 85, .72);
+}
+body.dark-mode .auth-form,
+body.dark-mode .role-card {
+  background: rgba(30, 41, 59, .88);
+}
+body.dark-mode .variant-card {
+  background: rgba(30, 41, 59, .88);
+}
+body.dark-mode .empty-state {
+  background: rgba(30, 41, 59, .62);
+}
+body.dark-mode .modal-box,
+body.dark-mode .results-box {
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, .3);
+}
+body.dark-mode .drop-zone {
+  background: var(--surface-hover);
+}
+body.dark-mode .task-card {
+  background: var(--surface);
+}
+body.dark-mode .task-img-area {
+  background: var(--surface);
+}
+body.dark-mode .draw-toolbar {
+  background: rgba(30, 41, 59, .9);
+}
+body.dark-mode .solver-header {
+  background: rgba(30, 41, 59, .86);
+}
+body.dark-mode .solver-footer {
+  background: rgba(30, 41, 59, .9);
+}
+body.dark-mode .btn-auth-secondary,
+body.dark-mode .btn-ghost {
+  background: var(--surface);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; }
 body {
@@ -77,8 +148,90 @@ button { -webkit-tap-highlight-color: transparent; }
   font-size: 12px;
   font-weight: 500;
 }
-.header-nav { display: flex; align-items: center; gap: 8px; }
+.header-nav { display: flex; align-items: center; gap: 8px; position: relative; }
 .nav-chevron { color: var(--text-muted); }
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.settings-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--surface-hover);
+}
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 200px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+.settings-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.settings-option > span:first-child {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background .2s ease;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: transform .2s ease;
+}
+#dark-mode-toggle:checked ~ .toggle-switch,
+#dark-mode-toggle-auth:checked ~ .toggle-switch,
+#dark-mode-toggle-register:checked ~ .toggle-switch,
+#dark-mode-toggle-list:checked ~ .toggle-switch {
+  background: var(--accent);
+}
+#dark-mode-toggle:checked ~ .toggle-switch::after,
+#dark-mode-toggle-auth:checked ~ .toggle-switch::after,
+#dark-mode-toggle-register:checked ~ .toggle-switch::after,
+#dark-mode-toggle-list:checked ~ .toggle-switch::after {
+  transform: translateX(20px);
+}
+.settings-option input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
 
 .dashboard-main {
   width: min(100%, 1260px);
