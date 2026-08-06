@@ -62,6 +62,7 @@ function restoreScreenFromState() {
   if (state.screen === 'list') { showScreen('list'); loadVariants(); }
   else if (state.screen === 'solver') { startSolver(state.variantId, state.variantName, true); }
   else if (state.screen === 'auth') { showScreen('auth'); }
+  else if (state.screen === 'register') { showScreen('register'); }
   else { showScreen('dashboard'); loadDashboard(); }
 }
 
@@ -587,14 +588,37 @@ function closeSettings() {
   }
 }
 
+// ─── Регистрация: роль ────────────────────────────────────
+function updateRegisterRole() {
+  const role = document.querySelector('input[name="register-role"]:checked')?.value;
+  if (!$('field-class') || !$('field-subjects')) return;
+  $('field-class').classList.toggle('hidden', role !== 'student');
+  $('field-subjects').classList.toggle('hidden', role !== 'teacher');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   function enterApp() {
     go({ screen: 'list' });
     loadVariants();
   }
 
-  $('btn-auth-login').addEventListener('click', enterApp);
-  $('btn-auth-register').addEventListener('click', enterApp);
+  $('auth-form').addEventListener('submit', event => { event.preventDefault(); enterApp(); });
+  $('register-form').addEventListener('submit', event => { event.preventDefault(); enterApp(); });
+  $('btn-auth-register').addEventListener('click', () => go({ screen: 'register' }));
+  $('btn-register-back').addEventListener('click', () => go({ screen: 'auth' }));
+  document.querySelectorAll('.auth-pw-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = btn.closest('.auth-input-wrap').querySelector('input');
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      btn.classList.toggle('visible', visible);
+      btn.setAttribute('aria-pressed', String(visible));
+      btn.setAttribute('aria-label', visible ? 'Скрыть пароль' : 'Показать пароль');
+    });
+  });
+
+  document.querySelectorAll('input[name="register-role"]').forEach(input => input.addEventListener('change', updateRegisterRole));
+  updateRegisterRole();
   $('btn-open-all').addEventListener('click', enterApp);
   $('btn-dashboard-create').addEventListener('click', openModal);
   $('btn-dashboard-profile').addEventListener('click', () => go({ screen: 'auth' }));
