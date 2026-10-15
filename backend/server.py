@@ -84,7 +84,7 @@ def get_variants():
 
 
 @app.route('/api/upload', methods=['POST'])
-def upload_variant():
+def upload_variant():   
     if 'variant' not in request.files or 'answers' not in request.files:
         return jsonify({'error': 'Нужно загрузить 2 файла: variant и answers'}), 400
 
