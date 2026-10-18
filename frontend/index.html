@@ -8,6 +8,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/frontend/style.css" />
+  <script>
+    // Тема применяется до отрисовки страницы, чтобы не было мигания светлой темы.
+    (function () {
+      var theme = null;
+      try {
+        theme = localStorage.getItem('alexandria-theme');
+      } catch (e) { /* приватный режим — берём тему системы */ }
+      if (theme !== 'dark' && theme !== 'light') {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
 </head>
 <body>
 
@@ -17,9 +30,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav" aria-label="Раздел обучения">
-      <span class="nav-hint">Подготовка к ЕГЭ</span>
-      <svg class="nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    <nav class="header-nav" aria-label="Оформление">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Переключить тему" aria-pressed="false" title="Тёмная тема">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v2.3M12 19.5v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.2 12h2.3M19.5 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+      </button>
     </nav>
   </header>
 
@@ -83,6 +98,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.2" y1="16.2" x2="21" y2="21"/></svg>
       <input id="profile-search-input" type="search" placeholder="Поиск по номеру или теме..." aria-label="Поиск вариантов" />
     </form>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Переключить тему" aria-pressed="false" title="Тёмная тема">
+      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v2.3M12 19.5v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.2 12h2.3M19.5 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+    </button>
     <button class="profile-user-button" aria-label="Профиль">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
     </button>
@@ -134,8 +153,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav">
-      <span class="nav-hint">Подготовка к ЕГЭ</span>
+    <nav class="header-nav" aria-label="Оформление">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Переключить тему" aria-pressed="false" title="Тёмная тема">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v2.3M12 19.5v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.2 12h2.3M19.5 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+      </button>
     </nav>
   </header>
 
@@ -172,8 +194,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav">
-      <span class="nav-hint">Регистрация</span>
+    <nav class="header-nav" aria-label="Оформление">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Переключить тему" aria-pressed="false" title="Тёмная тема">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v2.3M12 19.5v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.2 12h2.3M19.5 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+      </button>
     </nav>
   </header>
 
@@ -227,8 +252,11 @@
       <span class="logo-icon" aria-hidden="true">A</span>
       <span class="logo-text">Alexandria</span>
     </div>
-    <nav class="header-nav">
-      <span class="nav-hint">Подготовка к ЕГЭ</span>
+    <nav class="header-nav" aria-label="Оформление">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Переключить тему" aria-pressed="false" title="Тёмная тема">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v2.3M12 19.5v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.2 12h2.3M19.5 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+      </button>
     </nav>
   </header>
 
