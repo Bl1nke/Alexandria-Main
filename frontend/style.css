@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f6f7f9;
   --surface: #ffffff;
   --surface-soft: #eef1f5;
@@ -71,31 +72,49 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 800;
 }
 .logo-text { font-size: 17px; font-weight: 800; }
-.nav-hint {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 500;
-}
 .header-nav { display: flex; align-items: center; gap: 8px; }
-.nav-chevron { color: var(--text-muted); }
+.theme-toggle {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+}
+.theme-toggle:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); transform: translateY(-1px); }
+.theme-toggle:active { transform: translateY(0); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle svg { width: 19px; height: 19px; }
+.theme-icon { display: block; }
+.theme-icon-sun { display: none; }
+[data-theme="dark"] .theme-icon-sun { display: block; }
+[data-theme="dark"] .theme-icon-moon { display: none; }
 
 .dashboard-main {
-  width: min(100%, 1260px);
+  width: min(100%, 1080px);
   flex: 1;
   margin: 0 auto;
-  padding: clamp(48px, 5vw, 68px) clamp(20px, 4vw, 42px) 72px;
+  padding: clamp(38px, 4.4vw, 58px) clamp(18px, 3vw, 34px) 58px;
 }
 .dashboard-greeting {
-  margin: 0 0 42px 8px;
+  margin: 0 0 34px 0;
   color: #0f1f3d;
-  font-size: clamp(28px, 3.1vw, 38px);
+  /* Как в макете-референсе: приветствие идёт одной строкой («Здравствуйте,
+     Виктория, самое время, чтобы сделать учеников лучше!») с обычными пробелами,
+     поэтому текст не растягиваем по ширине, а подбираем кегль так, чтобы строка
+     целиком уложилась в ширину ряда карточек. */
+  font-size: clamp(24px, 2.9vw, 28px);
   font-weight: 800;
   letter-spacing: -.035em;
   line-height: 1.22;
 }
 .dashboard-greeting span { color: var(--accent); }
-.dashboard-grid { display: grid; grid-template-columns: minmax(420px, 1.07fr) minmax(470px, 1fr); gap: 28px; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(300px, 1.07fr) minmax(320px, 1fr); gap: 22px; }
 .dashboard-card {
   border: 1px solid rgba(220, 225, 232, .72);
   border-radius: 20px;
@@ -106,28 +125,28 @@ button { -webkit-tap-highlight-color: transparent; }
 .dashboard-card-heading h2, .mini-card h2 { color: #0f1f3d; font-size: 16px; font-weight: 800; line-height: 1.25; }
 .dashboard-icon { display: inline-flex; width: 52px; height: 52px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #f7f9ff, #eaf0ff); color: var(--accent); }
 .dashboard-icon svg { width: 26px; height: 26px; }
-.recent-card { display: flex; min-height: 630px; flex-direction: column; padding: 32px; }
-.recent-variants { display: grid; gap: 16px; margin-top: 32px; }
-.recent-variant { display: flex; min-height: 64px; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; color: #0f1f3d; text-align: left; cursor: pointer; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.recent-card { display: flex; min-height: 540px; flex-direction: column; padding: 26px; }
+.recent-variants { display: grid; gap: 14px; margin-top: 26px; }
+.recent-variant { display: flex; min-height: 58px; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; color: #0f1f3d; text-align: left; cursor: pointer; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
 .recent-variant:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(37, 99, 235, .1); }
 .recent-variant svg { width: 22px; height: 22px; flex: 0 0 auto; color: var(--accent); }
 .recent-variant-name { overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .recent-variant .action-arrow { width: 23px; height: 23px; margin-left: auto; }
 .dashboard-empty { padding: 20px 0; color: var(--text-muted); font-size: 15px; }
-.dashboard-action { display: flex; width: 100%; min-height: 60px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 26px; border: 0; border-radius: 12px; background: linear-gradient(110deg, #f3f6ff, #edf2fc); color: var(--accent); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .15s ease; }
+.dashboard-action { display: flex; width: 100%; min-height: 54px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 26px; border: 0; border-radius: 12px; background: linear-gradient(110deg, #f3f6ff, #edf2fc); color: var(--accent); font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .15s ease; }
 .dashboard-action > svg:not(.action-arrow) { width: 22px; height: 22px; flex: 0 0 auto; }
 .dashboard-action:hover { background: #e6eeff; transform: translateY(-1px); }
 .action-arrow { width: 22px; height: 22px; flex: 0 0 auto; }
 .dashboard-full-list { margin-top: auto; }
-.dashboard-side { display: grid; gap: 28px; }
-.search-card { padding: 22px; }
+.dashboard-side { display: grid; gap: 22px; }
+.search-card { padding: 18px; }
 .dashboard-search { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding: 0 14px 0 16px; border: 1px solid var(--border); border-radius: 11px; background: #fff; }
 .dashboard-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, .09); }
-.dashboard-search input { width: 100%; min-height: 42px; border: 0; outline: 0; color: var(--ink); font-size: 12px; padding: 0 4px; }
+.dashboard-search input { width: 100%; min-height: 42px; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 12px; padding: 0 4px; }
 .dashboard-search input::placeholder { color: #9ba8c0; }
 .dashboard-search button { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--accent); cursor: pointer; }
 .dashboard-search button svg { width: 18px; height: 18px; }
-.dashboard-mini-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.dashboard-mini-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 
 /* ── Дашборд: ровно один экран, без прокрутки вниз при входе на сайт ──
    Стартовый экран укладывается в высоту окна: отступы, шрифты и элементы
@@ -149,16 +168,21 @@ button { -webkit-tap-highlight-color: transparent; }
     font-size: clamp(13px, 1.9vh, 16px);
   }
   #screen-dashboard .logo-text { font-size: clamp(14px, 1.9vh, 17px); }
+  #screen-dashboard .theme-toggle {
+    width: clamp(28px, 3.8vh, 38px);
+    height: clamp(28px, 3.8vh, 38px);
+  }
+  #screen-dashboard .theme-toggle svg { width: clamp(14px, 2.1vh, 19px); height: clamp(14px, 2.1vh, 19px); }
   #screen-dashboard .dashboard-main {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: clamp(14px, 3.4vh, 52px) clamp(20px, 4vw, 42px) clamp(12px, 3vh, 44px);
+    padding: clamp(14px, 3.4vh, 52px) clamp(18px, 3vw, 34px) clamp(12px, 3vh, 44px);
   }
   #screen-dashboard .dashboard-greeting {
     flex: 0 0 auto;
-    margin: 0 0 clamp(12px, 2.6vh, 42px) 8px;
-    font-size: clamp(19px, calc(1.2vw + 1.4vh), 38px);
+    margin: 0 0 clamp(12px, 2.6vh, 42px) 0;
+    font-size: clamp(19px, calc(1.2vw + 1.4vh), 28px);
   }
   #screen-dashboard .dashboard-grid {
     flex: 1 1 auto;
@@ -253,7 +277,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .profile-main { width: 100%; }
   .profile-layout { width: 100%; overflow-x: hidden; box-sizing: border-box; }
 }
-.mini-card { display: flex; min-height: 300px; flex-direction: column; align-items: flex-start; padding: 22px; }
+.mini-card { display: flex; min-height: 250px; flex-direction: column; align-items: flex-start; padding: 20px; }
 .mini-card h2 { margin-top: 18px; }
 .mini-card p { margin-top: 14px; color: #40557a; font-size: 13px; line-height: 1.6; }
 .mini-card .dashboard-action { min-height: 50px; margin-top: auto; padding-inline: 22px; }
@@ -938,7 +962,6 @@ button { -webkit-tap-highlight-color: transparent; }
 
 @media (max-width: 760px) {
   .app-header { padding-inline: 18px; }
-  .header-nav { display: none; }
   .dashboard-main { padding-top: 36px; }
   .dashboard-greeting { margin-left: 0; margin-bottom: 28px; }
   .dashboard-grid { grid-template-columns: 1fr; gap: 18px; }
@@ -994,3 +1017,139 @@ button { -webkit-tap-highlight-color: transparent; }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Тёмная тема ────────────────────────────────────────────────────────
+   Включается кнопкой переключения темы в шапке: атрибут data-theme="dark"
+   ставится на <html>. Ниже переопределяются переменные палитры и те
+   немногочисленные правила, где раньше были «зашиты» светлые цвета. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --surface: #161c24;
+  --surface-soft: #1b232d;
+  --surface-hover: #19212b;
+  --border: #2b3542;
+  --border-strong: #3d4a5a;
+  --text: #e6edf3;
+  --text-mid: #b3bfcd;
+  --text-muted: #8695a6;
+  --accent: #5b8def;
+  --accent-strong: #79a6ff;
+  --accent-soft: #1a2740;
+  --green: #3fb950;
+  --green-soft: #12261a;
+  --red: #f47067;
+  --red-soft: #2c1618;
+  --ink: #e6edf3;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .35);
+  --shadow-md: 0 18px 48px rgba(0, 0, 0, .6);
+}
+
+[data-theme="dark"] body {
+  background: linear-gradient(180deg, rgba(22, 28, 36, .9), rgba(13, 17, 23, .97) 340px), var(--bg);
+}
+
+/* Шапка и логотип */
+[data-theme="dark"] .app-header {
+  border-bottom-color: rgba(43, 53, 66, .85);
+  background: rgba(13, 17, 23, .82);
+}
+[data-theme="dark"] .logo-icon {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+[data-theme="dark"] .theme-toggle { background: var(--surface-soft); }
+
+/* Дашборд */
+[data-theme="dark"] .dashboard-greeting,
+[data-theme="dark"] .dashboard-card-heading h2,
+[data-theme="dark"] .mini-card h2 { color: var(--text); }
+[data-theme="dark"] .dashboard-card {
+  border-color: rgba(43, 53, 66, .8);
+  background: rgba(22, 28, 36, .88);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .35);
+}
+[data-theme="dark"] .dashboard-icon { background: radial-gradient(circle at 50% 35%, #1e2a44, #172034); }
+[data-theme="dark"] .recent-variant { background: var(--surface-soft); color: var(--text); }
+[data-theme="dark"] .recent-variant:hover { box-shadow: 0 8px 20px rgba(91, 141, 239, .18); }
+[data-theme="dark"] .dashboard-action { background: linear-gradient(110deg, #1c2a44, #182338); }
+[data-theme="dark"] .dashboard-action:hover { background: #22314d; }
+[data-theme="dark"] .dashboard-search { background: var(--surface-soft); }
+[data-theme="dark"] .dashboard-search input::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .mini-card p { color: var(--text-mid); }
+
+/* Список вариантов */
+[data-theme="dark"] .empty-state { background: rgba(22, 28, 36, .6); }
+[data-theme="dark"] .empty-icon { background: var(--surface-soft); }
+[data-theme="dark"] .variant-card { background: rgba(22, 28, 36, .88); }
+[data-theme="dark"] .variant-card:hover { box-shadow: 0 16px 38px rgba(0, 0, 0, .45); }
+[data-theme="dark"] .btn-solve { border-color: var(--accent); background: var(--accent); }
+[data-theme="dark"] .btn-solve:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+[data-theme="dark"] .btn-delete { background: var(--surface-soft); }
+
+/* Вход и регистрация */
+[data-theme="dark"] .auth-form { background: rgba(22, 28, 36, .9); }
+[data-theme="dark"] .auth-input:focus { background: var(--surface-soft); }
+[data-theme="dark"] .btn-auth-secondary { background: var(--surface-soft); }
+[data-theme="dark"] .role-card:hover { background: var(--surface-soft); }
+
+/* Модальное окно и результаты */
+[data-theme="dark"] .modal-backdrop,
+[data-theme="dark"] .results-panel { background: rgba(2, 6, 11, .62); }
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .results-box { border-color: rgba(43, 53, 66, .9); }
+[data-theme="dark"] .btn-ghost { background: var(--surface-soft); }
+
+/* Экран решения */
+[data-theme="dark"] .solver-header { background: rgba(13, 17, 23, .86); }
+[data-theme="dark"] .solver-footer { background: rgba(13, 17, 23, .9); }
+[data-theme="dark"] .btn-back { background: var(--surface-soft); }
+[data-theme="dark"] .answer-input:focus { background: var(--surface-soft); }
+
+/* Профиль */
+[data-theme="dark"] .profile-search { border-color: var(--border); background: var(--surface-soft); }
+[data-theme="dark"] .profile-search input::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .profile-layout { background: var(--bg); }
+[data-theme="dark"] .profile-sidebar { border-right-color: var(--border); border-bottom-color: var(--border); background: var(--surface); }
+[data-theme="dark"] .profile-nav-item { color: var(--text-mid); }
+[data-theme="dark"] .profile-nav-item svg { color: var(--accent); }
+[data-theme="dark"] .profile-nav-item:hover,
+[data-theme="dark"] .profile-nav-item.active {
+  background: linear-gradient(110deg, #1c2a44, #182338);
+  color: var(--accent);
+}
+[data-theme="dark"] .profile-panel {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, .28);
+}
+[data-theme="dark"] .profile-identity h1 { color: var(--text); }
+[data-theme="dark"] .profile-role { color: var(--accent); }
+[data-theme="dark"] .profile-contact-list,
+[data-theme="dark"] .profile-role-card { border-color: var(--border); }
+[data-theme="dark"] .profile-contact-list > div,
+[data-theme="dark"] .profile-role-card { color: var(--text-mid); }
+[data-theme="dark"] .profile-contact-list svg,
+[data-theme="dark"] .profile-role-card svg { color: var(--accent); }
+[data-theme="dark"] .profile-contact-list small { color: var(--text-muted); }
+[data-theme="dark"] .profile-role-card strong { color: var(--accent); }
+[data-theme="dark"] .profile-content h2 { color: var(--text); }
+[data-theme="dark"] .activity-month b,
+[data-theme="dark"] .activity-legend { color: var(--text-muted); }
+[data-theme="dark"] .activity-month i { background: #1f2b3d; }
+[data-theme="dark"] .stat-card { border-color: var(--border); }
+[data-theme="dark"] .stat-icon { background: var(--accent-soft); color: var(--accent); }
+[data-theme="dark"] .stat-card p,
+[data-theme="dark"] .stat-card small { color: var(--text-muted); }
+[data-theme="dark"] .stat-card strong { color: var(--text); }
+[data-theme="dark"] .chart-card h3,
+[data-theme="dark"] .chart-score { color: var(--text); }
+[data-theme="dark"] .chart-lines { stroke: var(--border); }
+[data-theme="dark"] .chart-labels { color: var(--text-muted); }
+[data-theme="dark"] .table-wrap { border-color: var(--border); }
+[data-theme="dark"] table { color: var(--text-mid); }
+[data-theme="dark"] th { background: var(--surface-soft); color: var(--text-mid); }
+[data-theme="dark"] td { border-top-color: var(--border); }
+[data-theme="dark"] tr:nth-child(even) td { background: rgba(255, 255, 255, .025); }
