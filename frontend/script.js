@@ -33,42 +33,12 @@ function isUploadModalOpen() {
 }
 
 function showScreen(name) {
-  closeSettings();
   document.querySelectorAll('.screen').forEach(screen => {
     const isActive = screen.id === `screen-${name}`;
     screen.classList.toggle('active', isActive);
     screen.classList.toggle('hidden', !isActive);
   });
   window.scrollTo({ top: 0, behavior: 'instant' });
-}
-
-// ─── Навигация с историей браузера ────────────────────────
-// go() — переход на экран с добавлением записи в history, чтобы
-// кнопка «назад» в браузере возвращала на предыдущий экран сайта.
-function go(next) {
-  const prev = history.state || {};
-  if (prev.screen === next.screen && prev.variantId === next.variantId) {
-    showScreen(next.screen);
-    return;
-  }
-  history.pushState(next, '');
-  showScreen(next.screen);
-}
-
-// Восстановление экрана по записи истории: вызывается при загрузке/
-// обновлении страницы (после F5) и при кнопках «назад»/«вперёд».
-function restoreScreenFromState() {
-  const state = history.state || {};
-  if (state.screen === 'list') { showScreen('list'); loadVariants(); }
-  else if (state.screen === 'solver') { startSolver(state.variantId, state.variantName, true); }
-  else if (state.screen === 'auth') { showScreen('auth'); }
-  else if (state.screen === 'register') { showScreen('register'); }
-  else { showScreen('dashboard'); loadDashboard(); }
-}
-
-function restoreFromHistory() {
-  restoreScreenFromState();
-  if ((history.state || {}).modal === 'upload') openModal();
 }
 
 function openModal() {
@@ -243,7 +213,7 @@ async function deleteVariant(id, card) {
   }
 }
 
-async function startSolver(variantId, variantName, viaHistory = false) {
+async function startSolver(variantId, variantName) {
   state.variantId = variantId;
   state.variantName = variantName;
   state.answers = {};
@@ -251,9 +221,7 @@ async function startSolver(variantId, variantName, viaHistory = false) {
   $('solver-title').textContent = variantName;
   $('tasks-list').innerHTML = '<p class="loading-state">Загрузка...</p>';
   $('results-panel').classList.add('hidden');
-
-  if (viaHistory) showScreen('solver');
-  else go({ screen: 'solver', variantId, variantName });
+  showScreen('solver');
 
   try {
     const res = await apiFetch(`${API}/variants/${variantId}`);
@@ -546,82 +514,42 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
-// ─── Настройки и тема ─────────────────────────────────────
-const THEME_KEY = 'alexandria-theme';
-
-function applyTheme(dark) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
-}
-
-function initTheme() {
-  let dark;
-  try {
-    const stored = localStorage.getItem(THEME_KEY);
-    dark = stored !== null
-      ? stored === 'dark'
-      : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  } catch (e) { dark = false; }
-  applyTheme(dark);
-  $('theme-toggle').checked = dark;
-}
-
-function openSettings(btn) {
-  const menu = $('settings-menu');
-  btn.setAttribute('aria-expanded', 'true');
-  const rect = btn.getBoundingClientRect();
-  const menuWidth = 300;
-  const menuHeight = 130;
-  let top = rect.bottom + 10;
-  if (top + menuHeight > window.innerHeight - 8) top = Math.max(8, rect.top - menuHeight - 10);
-  const left = Math.min(window.innerWidth - menuWidth - 8, Math.max(8, rect.right - menuWidth));
-  menu.style.top = `${Math.round(top)}px`;
-  menu.style.left = `${Math.round(left)}px`;
-  menu.classList.remove('hidden');
-}
-
-function closeSettings() {
-  const menu = $('settings-menu');
-  if (menu) {
-    menu.classList.add('hidden');
-    document.querySelectorAll('.settings-btn').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
-  }
-}
-
-// ─── Регистрация: роль ────────────────────────────────────
-function updateRegisterRole() {
-  const role = document.querySelector('input[name="register-role"]:checked')?.value;
-  if (!$('field-class') || !$('field-subjects')) return;
-  $('field-class').classList.toggle('hidden', role !== 'student');
-  $('field-subjects').classList.toggle('hidden', role !== 'teacher');
+function renderActivity() {
+  const months = ['Сен', 'Окт', 'Ноя', 'Дек', 'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг'];
+  const target = $('activity-months');
+  if (!target || target.children.length) return;
+  target.innerHTML = months.map((month, monthIndex) => {
+    const cells = Array.from({ length: 20 }, (_, day) => {
+      const seed = (monthIndex * 11 + day * 7 + 3) % 10;
+      const level = seed > 7 ? 3 : seed > 4 ? 2 : seed > 2 ? 1 : 0;
+      return `<i${level ? ` class="level-${level}"` : ''}></i>`;
+    }).join('');
+    return `<div class="activity-month"><b>${month}</b>${cells}</div>`;
+  }).join('');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   function enterApp() {
-    go({ screen: 'list' });
+    showScreen('list');
     loadVariants();
   }
 
-  $('auth-form').addEventListener('submit', event => { event.preventDefault(); enterApp(); });
-  $('register-form').addEventListener('submit', event => { event.preventDefault(); enterApp(); });
-  $('btn-auth-register').addEventListener('click', () => go({ screen: 'register' }));
-  $('btn-register-back').addEventListener('click', () => go({ screen: 'auth' }));
-  document.querySelectorAll('.auth-pw-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const input = btn.closest('.auth-input-wrap').querySelector('input');
-      const visible = input.type === 'password';
-      input.type = visible ? 'text' : 'password';
-      btn.classList.toggle('visible', visible);
-      btn.setAttribute('aria-pressed', String(visible));
-      btn.setAttribute('aria-label', visible ? 'Скрыть пароль' : 'Показать пароль');
-    });
-  });
-
-  document.querySelectorAll('input[name="register-role"]').forEach(input => input.addEventListener('change', updateRegisterRole));
-  updateRegisterRole();
+  $('btn-auth-login').addEventListener('click', enterApp);
+  $('btn-auth-register').addEventListener('click', enterApp);
   $('btn-open-all').addEventListener('click', enterApp);
   $('btn-dashboard-create').addEventListener('click', openModal);
-  $('btn-dashboard-profile').addEventListener('click', () => go({ screen: 'auth' }));
+  $('btn-dashboard-profile').addEventListener('click', () => {
+    renderActivity();
+    showScreen('profile');
+  });
+  $('btn-profile-home').addEventListener('click', () => showScreen('dashboard'));
+  $('btn-profile-dashboard').addEventListener('click', () => showScreen('dashboard'));
+  $('btn-profile-variants').addEventListener('click', enterApp);
+  $('profile-search-form').addEventListener('submit', event => {
+    event.preventDefault();
+    state.searchQuery = $('profile-search-input').value;
+    enterApp();
+  });
   $('dashboard-search-form').addEventListener('submit', event => {
     event.preventDefault();
     state.searchQuery = $('dashboard-search-input').value;
@@ -634,13 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.target === $('modal-upload')) closeModal();
   });
   window.addEventListener('popstate', () => {
-    const state = history.state || {};
-    const modalOpen = isUploadModalOpen();
-
-    if (state.modal === 'upload' && !modalOpen) openModal();
-    else if (state.modal !== 'upload' && modalOpen) closeModal(true);
-
-    restoreScreenFromState();
+    if (isUploadModalOpen()) closeModal(true);
   });
 
   setupDrop('zone-variant', 'input-variant', 'name-variant', 'variant');
@@ -648,34 +570,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btn-submit-upload').addEventListener('click', upload);
   $('btn-back').addEventListener('click', () => {
-    if (history.state?.screen === 'solver') history.back();
-    else { showScreen('list'); loadVariants(); }
+    showScreen('list');
+    loadVariants();
   });
   $('btn-submit-answers').addEventListener('click', submitAnswers);
   $('btn-results-back').addEventListener('click', () => {
     $('results-panel').classList.add('hidden');
-    if (history.state?.screen === 'solver') history.back();
-    else { showScreen('list'); loadVariants(); }
+    showScreen('list');
+    loadVariants();
   });
 
-  initTheme();
-  $('theme-toggle').addEventListener('change', event => applyTheme(event.target.checked));
-
-  document.addEventListener('click', event => {
-    const menu = $('settings-menu');
-    const btn = event.target.closest('.settings-btn');
-    if (btn) {
-      if (menu.classList.contains('hidden')) openSettings(btn);
-      else closeSettings();
-      return;
-    }
-    if (!menu.classList.contains('hidden') && !event.target.closest('#settings-menu')) closeSettings();
-  });
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') closeSettings();
-  });
-  window.addEventListener('resize', closeSettings);
-
-  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-  restoreFromHistory();
+  showScreen('dashboard');
+  loadDashboard();
 });
