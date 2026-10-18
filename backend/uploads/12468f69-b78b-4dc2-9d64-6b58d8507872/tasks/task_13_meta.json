@@ -1,0 +1,9 @@
+{
+  "id": 13,
+  "display_id": "13",
+  "type": "ne_with_word",
+  "type_name": "НЕ со словами",
+  "answer": "24",
+  "image_file": "task_13.png",
+  "is_text": false
+}

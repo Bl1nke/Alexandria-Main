@@ -1,0 +1,9 @@
+{
+  "id": 6,
+  "display_id": "6",
+  "type": "word_correction",
+  "type_name": "Исправление слова",
+  "answer": "памятный",
+  "image_file": "task_6.png",
+  "is_text": false
+}
