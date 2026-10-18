@@ -345,21 +345,44 @@
   <div id="results-panel" class="results-panel hidden">
     <div class="results-box">
       <h2 class="results-title">Результаты</h2>
-      <div class="score-ring">
-        <svg viewBox="0 0 120 120" aria-hidden="true">
-          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="8"/>
-          <circle id="score-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8"
-                  stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
-                  transform="rotate(-90 60 60)"/>
-        </svg>
-        <div class="score-center">
-          <span class="score-num" id="score-num">0</span>
-          <span class="score-total" id="score-total">/0</span>
+
+      <div class="results-summary">
+        <div class="score-ring">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle id="score-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8"
+                    stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                    transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="score-center">
+            <span class="score-num" id="score-num">0</span>
+            <span class="score-total" id="score-total">/0</span>
+          </div>
+        </div>
+        <p class="score-pct" id="score-pct">0%</p>
+      </div>
+
+      <div class="results-grid" id="results-grid">
+        <div class="results-col results-col-test">
+          <div class="results-parts" id="results-parts"></div>
+
+          <div class="results-details" id="results-details"></div>
+        </div>
+
+        <div class="results-col results-col-essay hidden" id="results-col-essay">
+          <div class="results-parts" id="results-parts-essay"></div>
+
+          <div class="essay-grade hidden" id="essay-grade">
+            <h3 class="essay-grade-title">Оценка сочинения (задание 27)</h3>
+            <p class="essay-grade-hint">Баллы по критериям K1–K12 (максимум 22 первичных балла).</p>
+            <div class="essay-criteria" id="essay-criteria"></div>
+            <div class="essay-grade-foot">
+              <span class="essay-grade-total" id="essay-total">Итого: 0 / 22</span>
+              <button class="btn-upload essay-grade-save" id="btn-save-essay">Сохранить оценку сочинения</button>
+            </div>
+          </div>
         </div>
       </div>
-      <p class="score-pct" id="score-pct">0%</p>
-
-      <div class="results-details" id="results-details"></div>
 
       <button class="btn-ghost results-back" id="btn-results-back">Вернуться к списку</button>
     </div>
