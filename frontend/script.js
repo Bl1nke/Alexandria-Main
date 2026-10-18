@@ -41,6 +41,12 @@ function showScreen(name) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+// Клик по надписи и значку «Alexandria» в шапке возвращает на главный экран.
+function goHome() {
+  showScreen('dashboard');
+  loadDashboard();
+}
+
 function openModal() {
   state.files = { variant: null, answers: null };
   ['variant', 'answers'].forEach(key => {
@@ -723,7 +729,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderActivity();
     showScreen('profile');
   });
-  $('btn-profile-home').addEventListener('click', () => showScreen('dashboard'));
+  document.querySelectorAll('[data-home]').forEach(logo => {
+    logo.addEventListener('click', goHome);
+  });
   $('btn-profile-dashboard').addEventListener('click', () => showScreen('dashboard'));
   $('btn-profile-variants').addEventListener('click', enterApp);
   $('profile-search-form').addEventListener('submit', event => {
