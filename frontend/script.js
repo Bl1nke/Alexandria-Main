@@ -234,7 +234,10 @@ async function startSolver(variantId, variantName) {
 }
 
 function renderTasks(tasks) {
-  $('solver-progress').textContent = `${tasks.length} заданий`;
+  const maxTotal = tasks.reduce((sum, task) => sum + (task.max_points || 0), 0);
+  $('solver-progress').textContent = maxTotal > 0
+    ? `${tasks.length} заданий · ${maxTotal} первичных баллов`
+    : `${tasks.length} заданий`;
   const list = $('tasks-list');
   list.innerHTML = '';
   tasks.forEach(task => list.appendChild(buildCard(task)));
@@ -251,7 +254,10 @@ function buildCard(task) {
     const label = task.id === 0 ? 'Текст для заданий 1-3' : 'Текст для заданий 23-26';
     head.innerHTML = `<span class="task-num text-label">${label}</span>`;
   } else {
-    head.innerHTML = `<span class="task-num">Задание ${task.id}</span><span class="task-type-badge">${esc(task.type_name || '')}</span>`;
+    const pointsBadge = task.max_points > 1
+      ? `<span class="task-points-badge">до ${task.max_points} б.</span>`
+      : '';
+    head.innerHTML = `<span class="task-num">Задание ${task.id}</span><span class="task-type-badge">${esc(task.type_name || '')}</span>${pointsBadge}`;
   }
   card.appendChild(head);
 
@@ -283,7 +289,7 @@ function buildCard(task) {
     const answerWrap = document.createElement('div');
     answerWrap.className = 'task-answer-wrap';
     answerWrap.innerHTML = `
-      <label class="answer-label" for="ans-${task.id}">Ответ</label>
+      <label class="answer-label" for="ans-${task.id}">Ответ${task.max_points > 1 ? ` · до ${task.max_points} б.` : ''}</label>
       <input class="answer-input" id="ans-${task.id}" type="text"
              placeholder="Введите ответ..." autocomplete="off" data-id="${task.id}" />
       <div class="answer-feedback" id="fb-${task.id}"></div>`;
@@ -466,10 +472,28 @@ function markAnswers(details) {
     const input = $(`ans-${item.id}`);
     const feedback = $(`fb-${item.id}`);
     if (!input) return;
-    input.classList.toggle('correct', item.correct);
-    input.classList.toggle('wrong', !item.correct);
-    feedback.className = `answer-feedback ${item.correct ? 'correct' : 'wrong'}`;
-    feedback.textContent = item.correct ? 'Верно' : `Правильно: ${item.correct_answer || '?'}`;
+
+    const max = item.max_points || 0;
+    const full = !item.needs_manual_grading && max > 0 && item.points >= max;
+    const partial = !item.needs_manual_grading && !full && item.points > 0;
+
+    input.classList.toggle('correct', full);
+    input.classList.toggle('partial', partial);
+    input.classList.toggle('wrong', !full && !partial);
+
+    if (item.needs_manual_grading) {
+      feedback.className = 'answer-feedback partial';
+      feedback.textContent = 'Проверяется вручную (сочинение)';
+    } else if (full) {
+      feedback.className = 'answer-feedback correct';
+      feedback.textContent = max > 1 ? `Верно · ${item.points} из ${max} б.` : 'Верно';
+    } else if (partial) {
+      feedback.className = 'answer-feedback partial';
+      feedback.textContent = `Частично · ${item.points} из ${max} б.`;
+    } else {
+      feedback.className = 'answer-feedback wrong';
+      feedback.textContent = `Правильно: ${item.correct_answer || '?'}`;
+    }
   });
 }
 
@@ -485,25 +509,149 @@ function showResults(data) {
   arc.style.strokeDashoffset = circumference * (1 - pct);
   arc.style.stroke = pct >= 0.6 ? 'var(--green)' : 'var(--red)';
 
-  const details = $('results-details');
-  details.innerHTML = '';
-  data.details.forEach(item => {
-    const row = document.createElement('div');
-    row.className = 'detail-row';
-    row.innerHTML = `
-      <span class="detail-num">#${item.id}</span>
-      <span class="detail-status">${item.correct ? '✓' : '×'}</span>
-      <span class="detail-answer">
-        ${item.correct
-          ? `<span class="detail-correct">${esc(item.user_answer || '-')}</span>`
-          : `<span style="color:var(--red)">${esc(item.user_answer || '-')}</span>
-             ${item.correct_answer ? `<span style="color:var(--text-muted)"> -> ${esc(item.correct_answer)}</span>` : ''}`}
-      </span>`;
-    details.appendChild(row);
-  });
+  renderParts(data);
+  renderDetails(data.details);
+  renderEssayForm(data.part2);
 
   $('results-panel').classList.remove('hidden');
   $('results-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderParts(data) {
+  renderPart($('results-parts'), 'Часть 1 · Тест', data.part1);
+  renderPart($('results-parts-essay'), 'Часть 2 · Сочинение', data.part2);
+}
+
+function renderPart(box, name, part) {
+  if (!box) return;
+  if (!part || !(part.max > 0)) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div class="results-part">
+      <span class="results-part-name">${name}</span>
+      <span class="results-part-score">${part.score} / ${part.max}</span>
+    </div>`;
+}
+
+function renderDetails(details) {
+  const box = $('results-details');
+  box.innerHTML = '';
+  details.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'detail-row';
+
+    const max = item.max_points || 0;
+    const status = item.needs_manual_grading ? '✎' : item.correct ? '✓' : '×';
+    const statusClass = item.needs_manual_grading ? 'manual' : item.correct ? 'ok' : 'bad';
+
+    let answer;
+    if (item.needs_manual_grading) {
+      answer = '<span style="color:var(--text-muted)">Сочинение — оценивается вручную</span>';
+    } else if (item.correct) {
+      answer = `<span class="detail-correct">${esc(item.user_answer || '-')}</span>`;
+    } else {
+      answer = `<span style="color:var(--red)">${esc(item.user_answer || '-')}</span>
+        ${item.correct_answer ? `<span style="color:var(--text-muted)"> -> ${esc(item.correct_answer)}</span>` : ''}`;
+    }
+
+    const pointsClass = item.needs_manual_grading
+      ? 'zero'
+      : max > 0 && item.points >= max ? 'full' : item.points > 0 ? 'partial' : 'zero';
+    const pointsHtml = item.needs_manual_grading || max > 0
+      ? `<span class="detail-points ${pointsClass}">${item.points}/${max}</span>`
+      : '';
+
+    row.innerHTML = `
+      <span class="detail-num">#${item.id}</span>
+      <span class="detail-status ${statusClass}">${status}</span>
+      <span class="detail-answer">${answer}</span>
+      ${pointsHtml}`;
+    box.appendChild(row);
+  });
+}
+
+function renderEssayForm(part2) {
+  const box = $('essay-grade');
+  const list = $('essay-criteria');
+  const col = $('results-col-essay');
+  const grid = $('results-grid');
+  const hasEssay = Boolean(part2 && part2.criteria && part2.criteria.length && part2.max > 0);
+
+  if (!hasEssay) {
+    box.classList.add('hidden');
+    col.classList.add('hidden');
+    grid.classList.remove('has-essay');
+    list.innerHTML = '';
+    return;
+  }
+
+  const values = part2.values || {};
+  list.innerHTML = part2.criteria.map(crit => {
+    const value = Number(values[crit.id] ?? 0);
+    return `
+      <label class="essay-criterion">
+        <span class="essay-criterion-name">${esc(crit.id)}. ${esc(crit.name)}</span>
+        <span class="essay-criterion-input">
+          <input class="essay-input" type="number" min="0" max="${crit.max}" step="1"
+                 value="${value}" data-criterion="${esc(crit.id)}" aria-label="${esc(crit.name)}" />
+          <span class="essay-criterion-max">/${crit.max}</span>
+        </span>
+      </label>`;
+  }).join('');
+
+  list.querySelectorAll('.essay-input').forEach(input => {
+    input.addEventListener('input', updateEssayTotal);
+  });
+
+  $('btn-save-essay').textContent = part2.pending
+    ? 'Сохранить оценку сочинения'
+    : 'Обновить оценку сочинения';
+
+  col.classList.remove('hidden');
+  grid.classList.add('has-essay');
+  box.classList.remove('hidden');
+  updateEssayTotal();
+}
+
+function updateEssayTotal() {
+  const inputs = document.querySelectorAll('.essay-input');
+  if (!inputs.length) return;
+  let total = 0;
+  let max = 0;
+  inputs.forEach(input => {
+    total += Number(input.value) || 0;
+    max += Number(input.max) || 0;
+  });
+  const target = $('essay-total');
+  if (target) target.textContent = `Итого: ${total} / ${max}`;
+}
+
+async function submitEssayGrade() {
+  const criteria = {};
+  document.querySelectorAll('.essay-input').forEach(input => {
+    criteria[input.dataset.criterion] = Number(input.value) || 0;
+  });
+
+  const btn = $('btn-save-essay');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`${API}/variants/${state.variantId}/essay-grade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ criteria }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    showResults(data);
+  } catch (e) {
+    alert(`Ошибка сохранения оценки: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function esc(value) {
@@ -607,6 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadVariants();
   });
   $('btn-submit-answers').addEventListener('click', submitAnswers);
+  $('btn-save-essay').addEventListener('click', submitEssayGrade);
   $('btn-results-back').addEventListener('click', () => {
     $('results-panel').classList.add('hidden');
     showScreen('list');
