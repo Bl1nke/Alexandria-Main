@@ -514,6 +514,37 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
+const THEME_KEY = 'alexandria-theme';
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+  document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+    button.setAttribute('aria-pressed', String(isDark));
+    button.setAttribute('aria-label', isDark ? 'Включить светлую тему' : 'Включить тёмную тему');
+    button.title = isDark ? 'Светлая тема' : 'Тёмная тема';
+  });
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch (e) { /* приватный режим — тема живёт до перезагрузки */ }
+  applyTheme(next);
+}
+
+function initTheme() {
+  applyTheme(currentTheme());
+  document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+    button.addEventListener('click', toggleTheme);
+  });
+}
+
 function renderActivity() {
   const months = ['Сен', 'Окт', 'Ноя', 'Дек', 'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг'];
   const target = $('activity-months');
@@ -529,6 +560,8 @@ function renderActivity() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+
   function enterApp() {
     showScreen('list');
     loadVariants();
