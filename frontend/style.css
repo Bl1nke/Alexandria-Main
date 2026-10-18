@@ -104,7 +104,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .dashboard-greeting {
   margin: 0 0 34px 0;
   color: #0f1f3d;
-  font-size: clamp(26px, 2.9vw, 36px);
+  /* Как в макете-референсе: приветствие идёт одной строкой («Здравствуйте,
+     Виктория, самое время, чтобы сделать учеников лучше!») с обычными пробелами,
+     поэтому текст не растягиваем по ширине, а подбираем кегль так, чтобы строка
+     целиком уложилась в ширину ряда карточек. */
+  font-size: clamp(24px, 2.9vw, 28px);
   font-weight: 800;
   letter-spacing: -.035em;
   line-height: 1.22;
@@ -178,7 +182,7 @@ button { -webkit-tap-highlight-color: transparent; }
   #screen-dashboard .dashboard-greeting {
     flex: 0 0 auto;
     margin: 0 0 clamp(12px, 2.6vh, 42px) 0;
-    font-size: clamp(19px, calc(1.2vw + 1.4vh), 38px);
+    font-size: clamp(19px, calc(1.2vw + 1.4vh), 28px);
   }
   #screen-dashboard .dashboard-grid {
     flex: 1 1 auto;
