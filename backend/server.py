@@ -51,6 +51,55 @@ def get_ext(filename: str) -> str:
     return filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
 
 
+# ─── ОЦЕНИВАНИЕ ──────────────────────────────────────────────
+
+def essay_grade_path(variant_dir: str) -> str:
+    return os.path.join(variant_dir, 'essay_grade.json')
+
+
+def read_essay_grade(variant_dir: str):
+    """Читает сохранённую ручную оценку сочинения (или None)."""
+    path = essay_grade_path(variant_dir)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def write_essay_grade(variant_dir: str, grade: dict) -> None:
+    with open(essay_grade_path(variant_dir), 'w', encoding='utf-8') as f:
+        json.dump(grade, f, ensure_ascii=False, indent=2)
+
+
+def build_result(variant_dir: str, user_answers: dict, correct_answers: dict) -> dict:
+    """Собирает результат проверки: часть 1 (тест) + часть 2 (сочинение)."""
+    score, max_score, part1, part2, details = scorer.calculate_score(user_answers, correct_answers)
+
+    # Схема критериев нужна фронтенду для формы ручной оценки сочинения.
+    part2['criteria'] = scorer.ESSAY_CRITERIA
+    part2['values'] = {}
+
+    essay_grade = read_essay_grade(variant_dir)
+    if essay_grade:
+        part2['score'] = essay_grade.get('score', 0)
+        part2['pending'] = False
+        part2['values'] = {item['id']: item.get('value', 0) for item in essay_grade.get('criteria', [])}
+
+    score = part1['score'] + part2['score']
+
+    return {
+        'score':      score,
+        'total':      max_score,
+        'percentage': round(score / max_score * 100, 1) if max_score > 0 else 0,
+        'part1':      part1,
+        'part2':      part2,
+        'details':    details,
+    }
+
+
 # ─── СТАТИКА ─────────────────────────────────────────────────
 
 @app.route('/')
@@ -163,13 +212,18 @@ def get_variant_details(variant_id):
         for fname in meta_files:
             with open(os.path.join(tasks_dir, fname), 'r', encoding='utf-8') as f:
                 meta = json.load(f)
+            is_text = meta.get('is_text', False)
+            max_points = meta.get('max_points')
+            if max_points is None:
+                max_points = 0 if is_text else variant_parser.task_max_points(meta['id'])
             tasks.append({
                 'id':         meta['id'],
                 'display_id': meta.get('display_id', str(meta['id'])),
                 'type':       meta.get('type', 'unknown'),
                 'type_name':  meta.get('type_name', 'Задание'),
                 'image_url':  f'uploads/{variant_id}/tasks/{meta["image_file"]}',
-                'is_text':    meta.get('is_text', False),
+                'is_text':    is_text,
+                'max_points': max_points,
             })
 
         return jsonify({'id': variant_id, 'tasks': tasks})
@@ -201,16 +255,42 @@ def submit_answers(variant_id):
         correct_answers = json.load(f)
 
     try:
-        score, total, details = scorer.calculate_score(user_answers, correct_answers)
+        result = build_result(variant_dir, user_answers, correct_answers)
     except Exception as e:
         return jsonify({'error': 'Ошибка проверки', 'details': str(e)}), 500
 
-    return jsonify({
-        'score':      score,
-        'total':      total,
-        'percentage': round(score / total * 100, 1) if total > 0 else 0,
-        'details':    details,
-    }), 200
+    return jsonify(result), 200
+
+
+@app.route('/api/variants/<variant_id>/essay-grade', methods=['POST'])
+def grade_essay_route(variant_id):
+    """Сохраняет ручную оценку сочинения (K1–K12) и возвращает обновлённый результат."""
+    variant_dir = os.path.join(UPLOADS_DIR, variant_id)
+    if not os.path.exists(variant_dir):
+        return jsonify({'error': 'Вариант не найден'}), 404
+
+    user_path    = os.path.join(variant_dir, 'user_answers.json')
+    correct_path = os.path.join(variant_dir, 'answers.json')
+    if not os.path.exists(user_path) or not os.path.exists(correct_path):
+        return jsonify({'error': 'Сначала отправьте ответы на проверку'}), 400
+
+    data = request.get_json() or {}
+    criteria = data.get('criteria', data) if isinstance(data, dict) else {}
+
+    grade = scorer.grade_essay(criteria)
+    write_essay_grade(variant_dir, grade)
+
+    with open(user_path, 'r', encoding='utf-8') as f:
+        user_answers = json.load(f)
+    with open(correct_path, 'r', encoding='utf-8') as f:
+        correct_answers = json.load(f)
+
+    try:
+        result = build_result(variant_dir, user_answers, correct_answers)
+    except Exception as e:
+        return jsonify({'error': 'Ошибка проверки', 'details': str(e)}), 500
+
+    return jsonify(result), 200
 
 
 @app.route('/api/variants/<variant_id>', methods=['DELETE'])

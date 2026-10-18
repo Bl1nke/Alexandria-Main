@@ -98,6 +98,54 @@ DPI = 140
 DRAWING_SPACE_PX = 180
 TASK_NUMBERS = set(range(1, 28))
 
+# ─── СХЕМА ОЦЕНИВАНИЯ ────────────────────────────────────────
+# Часть 1 (задания 1–26): максимум 28 первичных баллов.
+# Часть 2 (задание 27, сочинение): максимум 22 первичных балла.
+# Итого за вариант: 50 первичных баллов.
+#
+# TASK_MAX_POINTS задаёт расширенную схему оценивания по номеру задания.
+# По умолчанию задание оценивается в 1 балл, кроме перечисленных ниже.
+# Для другой версии КИМ (например, когда расширенное задание идёт под
+# другим номером) достаточно поправить эту таблицу — логика проверки
+# в scorer.py не меняется.
+PART1_SOURCE = range(1, 27)
+ESSAY_TASK = 27
+ESSAY_MAX_POINTS = 22
+DEFAULT_MAX_POINTS = 1
+TASK_MAX_POINTS = {
+    8: 2,                     # грамматические ошибки — до 2 баллов
+    16: 2,                    # одна запятая — до 2 баллов
+    ESSAY_TASK: ESSAY_MAX_POINTS,
+}
+# Правило начисления частичного балла для многобалльных заданий:
+#   "ordered" — позиционное сравнение (задание 8: ответ вида 41235)
+#   "set"     — сравнение по множеству цифр (задание 16: ответ вида 135)
+TASK_PARTIAL_RULE = {
+    "grammar_error": "ordered",
+    "punctuation_one_comma": "set",
+}
+DEFAULT_PARTIAL_RULE = "set"
+
+
+def task_max_points(task_id: int) -> int:
+    """Максимальный первичный балл за задание по номеру."""
+    return TASK_MAX_POINTS.get(task_id, DEFAULT_MAX_POINTS)
+
+
+def task_part(task_id: int) -> int:
+    """Номер части: 1 — тестовая, 2 — сочинение."""
+    return 2 if task_id == ESSAY_TASK else 1
+
+
+def task_partial_rule(task_type: str) -> str:
+    """Правило начисления частичного балла для типа задания."""
+    return TASK_PARTIAL_RULE.get(task_type, DEFAULT_PARTIAL_RULE)
+
+
+def part1_max_points() -> int:
+    """Максимум за часть 1 (1–26), в текущей схеме — 28."""
+    return sum(task_max_points(num) for num in PART1_SOURCE)
+
 
 def parse_answers(path: str) -> Dict[str, str]:
     ext = path.rsplit(".", 1)[-1].lower()
@@ -601,6 +649,8 @@ def process_variant(variant_path: str, answers_path: str, tasks_dir: str) -> int
             "answer": answers.get(str(task_id), "") if task_id > 0 else "",
             "image_file": image_file,
             "is_text": task_id in (0, -1),
+            "max_points": task_max_points(task_id) if task_id > 0 else 0,
+            "part": task_part(task_id) if task_id > 0 else 0,
         }
         with open(os.path.join(tasks_dir, f"task_{task_id}_meta.json"), "w", encoding="utf-8") as file:
             json.dump(meta, file, ensure_ascii=False, indent=2)
@@ -611,6 +661,9 @@ def process_variant(variant_path: str, answers_path: str, tasks_dir: str) -> int
         str(num): {
             "answer": answers.get(str(num), ""),
             "type": TASK_TYPES.get(num, "unknown"),
+            "max_points": task_max_points(num),
+            "part": task_part(num),
+            "partial_rule": task_partial_rule(TASK_TYPES.get(num, "unknown")),
         }
         for num in task_images
         if num > 0

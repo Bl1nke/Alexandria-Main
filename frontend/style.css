@@ -917,14 +917,36 @@ button { -webkit-tap-highlight-color: transparent; }
   background: rgba(255, 255, 255, .9);
   backdrop-filter: blur(16px);
 }
-.results-panel { z-index: 200; }
+.results-panel { align-items: flex-start; z-index: 200; }
 .results-box {
-  max-width: 540px;
-  padding: 38px 34px 30px;
-  text-align: center;
+  width: min(100%, 1020px);
+  max-width: 1020px;
+  margin: auto;
+  padding: 28px 32px;
+  text-align: left;
+  max-height: none;
 }
-.results-title { margin-bottom: 28px; }
-.score-ring { position: relative; width: 142px; height: 142px; margin: 0 auto 14px; }
+.results-title { margin-bottom: 14px; text-align: center; }
+
+/* Верхний центрированный блок: итог и процент */
+.results-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+/* Нижние колонки: слева тест, справа сочинение */
+.results-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.results-grid.has-essay { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+.results-col-essay.hidden { display: none; }
+
+.score-ring { position: relative; width: 120px; height: 120px; margin: 0 auto 10px; }
 .score-ring svg { width: 100%; height: 100%; }
 .score-center {
   position: absolute;
@@ -934,12 +956,12 @@ button { -webkit-tap-highlight-color: transparent; }
   align-items: center;
   justify-content: center;
 }
-.score-num { font-size: 42px; font-weight: 800; line-height: 1; }
+.score-num { font-size: 34px; font-weight: 800; line-height: 1; }
 .score-total { color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; }
-.score-pct { margin-bottom: 26px; color: var(--accent); font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+.score-pct { margin-bottom: 0; color: var(--accent); font-family: var(--font-mono); font-size: 16px; font-weight: 600; text-align: center; }
 .results-details {
   max-height: 300px;
-  margin-bottom: 22px;
+  margin-bottom: 0;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -949,16 +971,116 @@ button { -webkit-tap-highlight-color: transparent; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
+  font-size: 13px;
 }
 .detail-row:last-child { border-bottom: none; }
 .detail-num { min-width: 34px; color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; }
 .detail-status { min-width: 20px; text-align: center; }
 .detail-answer { flex: 1; color: var(--text-mid); overflow-wrap: anywhere; }
 .detail-correct { color: var(--green); font-weight: 700; }
-.results-back { width: 100%; }
+.results-back { width: 100%; margin-top: 18px; }
+
+/* ─── Оценивание: разбивка по частям, баллы, сочинение ─── */
+.detail-points { font-family: var(--font-mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.detail-points.full { color: var(--green); }
+.detail-points.partial { color: #d97706; }
+.detail-points.zero { color: var(--text-muted); }
+.detail-status.ok { color: var(--green); }
+.detail-status.bad { color: var(--red); }
+.detail-status.manual { color: var(--text-muted); }
+
+.results-parts {
+  display: block;
+  margin-bottom: 12px;
+}
+.results-part {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  text-align: left;
+}
+.results-part-name { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.results-part-score { color: var(--text); font-family: var(--font-mono); font-size: 15px; font-weight: 700; }
+
+.answer-input.partial { border-color: #d97706; background: #fff8ec; }
+.answer-feedback.partial { display: block; color: #d97706; }
+
+.essay-grade {
+  margin-bottom: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  text-align: left;
+}
+.essay-grade-title { margin-bottom: 4px; font-size: 15px; color: var(--text); }
+.essay-grade-hint { margin-bottom: 12px; color: var(--text-muted); font-size: 12px; }
+.essay-criteria {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin-bottom: 12px;
+}
+.essay-criterion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.essay-criterion-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-mid);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.essay-criterion-input { display: inline-flex; align-items: center; gap: 3px; }
+.essay-input {
+  width: 46px;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+}
+.essay-input:focus { border-color: var(--accent); background: var(--surface); }
+.essay-criterion-max { color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; }
+.essay-grade-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.essay-grade-total { color: var(--text-mid); font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+.essay-grade-save { width: auto; }
+
+.task-points-badge {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .results-grid.has-essay { grid-template-columns: minmax(0, 1fr); }
+  .essay-criteria { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .results-details { max-height: 260px; }
+}
 
 @media (max-width: 760px) {
   .app-header { padding-inline: 18px; }
@@ -988,6 +1110,9 @@ button { -webkit-tap-highlight-color: transparent; }
   .results-panel { align-items: flex-end; padding: 12px; }
   .modal-box,
   .results-box { width: 100%; }
+  .results-details { max-height: 240px; }
+  .essay-criteria { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .essay-grade-foot { flex-direction: column; align-items: stretch; }
   .modal-head { padding: 22px 20px 0; }
   .modal-body { padding: 20px; }
   .modal-foot { padding: 0 20px 20px; flex-direction: column-reverse; }
