@@ -129,6 +129,74 @@ button { -webkit-tap-highlight-color: transparent; }
 .dashboard-search button svg { width: 18px; height: 18px; }
 .dashboard-mini-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 
+/* ── Дашборд: ровно один экран, без прокрутки вниз при входе на сайт ──
+   Стартовый экран укладывается в высоту окна: отступы, шрифты и элементы
+   масштабируются от vh/vw (поэтому работает и при масштабе Windows 125–150%),
+   а длинный список вариантов прокручивается внутри карточки.
+   На мобильном (узкое окно) и в намеренно «сплющенном» окне (очень низком)
+   включается привычная прокрутка страницы. */
+@media (min-width: 961px) and (min-height: 560px) {
+  #screen-dashboard {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #screen-dashboard .app-header { padding-block: clamp(8px, 1.5vh, 16px); }
+  #screen-dashboard .logo-icon {
+    width: clamp(26px, 3.6vh, 32px);
+    height: clamp(26px, 3.6vh, 32px);
+    font-size: clamp(13px, 1.9vh, 16px);
+  }
+  #screen-dashboard .logo-text { font-size: clamp(14px, 1.9vh, 17px); }
+  #screen-dashboard .dashboard-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: clamp(14px, 3.4vh, 52px) clamp(20px, 4vw, 42px) clamp(12px, 3vh, 44px);
+  }
+  #screen-dashboard .dashboard-greeting {
+    flex: 0 0 auto;
+    margin: 0 0 clamp(12px, 2.6vh, 42px) 8px;
+    font-size: clamp(19px, calc(1.2vw + 1.4vh), 38px);
+  }
+  #screen-dashboard .dashboard-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1.07fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: clamp(14px, 2.4vh, 28px);
+  }
+  #screen-dashboard .dashboard-card-heading h2 { font-size: clamp(13px, 1.9vh, 16px); }
+  #screen-dashboard .dashboard-icon {
+    width: clamp(34px, 5.4vh, 52px);
+    height: clamp(34px, 5.4vh, 52px);
+  }
+  #screen-dashboard .dashboard-icon svg { width: clamp(18px, 2.9vh, 26px); height: clamp(18px, 2.9vh, 26px); }
+  #screen-dashboard .recent-card { min-height: 0; padding: clamp(16px, 2.6vh, 32px); }
+  #screen-dashboard .recent-variants { min-height: 0; margin-top: clamp(12px, 2.4vh, 32px); overflow-y: auto; }
+  #screen-dashboard .recent-variant { min-height: clamp(44px, 6.4vh, 64px); }
+  #screen-dashboard .dashboard-action { min-height: clamp(44px, 6.2vh, 60px); }
+  #screen-dashboard .recent-card .dashboard-full-list { min-height: clamp(42px, 5.8vh, 54px); }
+  #screen-dashboard .dashboard-side {
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: clamp(12px, 2.2vh, 28px);
+  }
+  #screen-dashboard .search-card { padding: clamp(14px, 2.2vh, 22px); }
+  #screen-dashboard .dashboard-search { margin-top: clamp(10px, 1.8vh, 18px); }
+  #screen-dashboard .dashboard-search input { min-height: clamp(30px, 4.6vh, 42px); }
+  #screen-dashboard .dashboard-mini-cards {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    gap: clamp(14px, 2vh, 18px);
+  }
+  #screen-dashboard .mini-card { min-height: 0; padding: clamp(14px, 2.4vh, 22px); }
+  #screen-dashboard .mini-card h2 { margin-top: clamp(9px, 1.6vh, 18px); font-size: clamp(13px, 1.9vh, 16px); }
+  #screen-dashboard .mini-card p { margin-top: clamp(7px, 1.4vh, 14px); font-size: clamp(11.5px, 1.55vh, 13px); }
+  #screen-dashboard .mini-card .dashboard-action { min-height: clamp(42px, 5.6vh, 50px); }
+}
+
 /* Profile */
 .profile-header { position: relative; padding-block: 10px; }
 .profile-logo-button { border: 0; background: transparent; color: inherit; cursor: pointer; }

@@ -1,0 +1,110 @@
+{
+  "1": {
+    "answer": "потомучто или таккак или оттогочто",
+    "type": "union_selection"
+  },
+  "2": {
+    "answer": "134",
+    "type": "lexical_meaning"
+  },
+  "3": {
+    "answer": "14",
+    "type": "text_analysis"
+  },
+  "4": {
+    "answer": "134",
+    "type": "stress"
+  },
+  "5": {
+    "answer": "дипломатичный",
+    "type": "paronym"
+  },
+  "6": {
+    "answer": "памятный",
+    "type": "word_correction"
+  },
+  "7": {
+    "answer": "пятисот",
+    "type": "word_form"
+  },
+  "8": {
+    "answer": "41235",
+    "type": "grammar_error"
+  },
+  "9": {
+    "answer": "13",
+    "type": "root_vowel"
+  },
+  "10": {
+    "answer": "1245",
+    "type": "prefix"
+  },
+  "11": {
+    "answer": "245",
+    "type": "suffix"
+  },
+  "12": {
+    "answer": "13",
+    "type": "verb_ending"
+  },
+  "13": {
+    "answer": "24",
+    "type": "ne_with_word"
+  },
+  "14": {
+    "answer": "1245",
+    "type": "union_spelling"
+  },
+  "15": {
+    "answer": "1356",
+    "type": "nn_spelling"
+  },
+  "16": {
+    "answer": "135",
+    "type": "punctuation_one_comma"
+  },
+  "17": {
+    "answer": "34",
+    "type": "punctuation_participles"
+  },
+  "18": {
+    "answer": "12367",
+    "type": "punctuation_intro"
+  },
+  "19": {
+    "answer": "156",
+    "type": "punctuation_complex"
+  },
+  "20": {
+    "answer": "1345",
+    "type": "punctuation_complex2"
+  },
+  "21": {
+    "answer": "136",
+    "type": "dash_usage"
+  },
+  "22": {
+    "answer": "41596",
+    "type": "expressive_means"
+  },
+  "23": {
+    "answer": "145",
+    "type": "content_analysis"
+  },
+  "24": {
+    "answer": "134",
+    "type": "text_features"
+  },
+  "25": {
+    "answer": "подпокровомночи или досихпор",
+    "type": "phraseology"
+  },
+  "26": {
+    "answer": "6",
+    "type": "text_connection"
+  },
+  "27": {
+    "answer": "Решение:\nАвторская позиция: Праздники, посвященные любви, необходимы людям, потому\nчто они помогают напомнить близким об их значимости и дают возможность\nвыразить искренние чувства, которые часто остаются невысказанными в\nповседневной жизни.\nИсточник: NeoFamily",
+    "type": "essay"
+  }
+}
