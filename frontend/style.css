@@ -72,6 +72,21 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 800;
 }
 .logo-text { font-size: 17px; font-weight: 800; }
+/* Логотип — это ссылка на главный экран: курсор-указатель и подсветка при наведении. */
+.logo-home-button {
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: transform .15s ease;
+}
+.logo-home-button .logo-icon { transition: background .15s ease, transform .15s ease; }
+.logo-home-button:hover .logo-text { color: var(--accent); }
+.logo-home-button:hover .logo-icon { background: var(--accent); transform: translateY(-1px); }
+.logo-home-button:active { transform: translateY(0); }
+.logo-home-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .header-nav { display: flex; align-items: center; gap: 8px; }
 .theme-toggle {
   display: inline-flex;
@@ -223,7 +238,6 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Profile */
 .profile-header { position: relative; padding-block: 10px; }
-.profile-logo-button { border: 0; background: transparent; color: inherit; cursor: pointer; }
 .profile-search { display: flex; width: min(31vw, 385px); align-items: center; gap: 11px; padding: 0 15px; border: 1px solid #cfe0f7; border-radius: 9px; background: #f8fbff; color: var(--accent); }
 .profile-search input { width: 100%; height: 40px; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
 .profile-search input::placeholder { color: #7e93af; }
