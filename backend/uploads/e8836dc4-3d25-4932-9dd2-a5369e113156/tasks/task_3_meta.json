@@ -1,0 +1,9 @@
+{
+  "id": 3,
+  "display_id": "3",
+  "type": "text_analysis",
+  "type_name": "Анализ текста",
+  "answer": "14",
+  "image_file": "task_3.png",
+  "is_text": false
+}

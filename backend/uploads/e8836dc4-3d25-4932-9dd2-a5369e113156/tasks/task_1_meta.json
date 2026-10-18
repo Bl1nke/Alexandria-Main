@@ -1,0 +1,9 @@
+{
+  "id": 1,
+  "display_id": "1",
+  "type": "union_selection",
+  "type_name": "Выбор союза",
+  "answer": "потомучто или таккак или оттогочто",
+  "image_file": "task_1.png",
+  "is_text": false
+}
