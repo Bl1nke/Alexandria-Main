@@ -71,15 +71,19 @@
 
         <div class="dashboard-mini-cards">
           <section class="dashboard-card mini-card">
-            <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg></span>
-            <h2>Добавить<br>новый вариант</h2>
-            <p>Создайте новый вариант<br>для ваших учеников.</p>
+            <div class="dashboard-card-heading">
+              <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg></span>
+              <h2>Добавить новый вариант</h2>
+            </div>
+            <p>Создайте новый вариант для ваших учеников.</p>
             <button class="dashboard-action" id="btn-dashboard-create"><span>Создать</span><svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
           </section>
           <section class="dashboard-card mini-card">
-            <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
-            <h2>Профиль</h2>
-            <p>Настройте профиль<br>и отслеживайте<br>свой прогресс.</p>
+            <div class="dashboard-card-heading">
+              <span class="dashboard-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+              <h2>Профиль</h2>
+            </div>
+            <p>Настройте профиль и отслеживайте свой прогресс.</p>
             <button class="dashboard-action" id="btn-dashboard-profile"><span>Перейти в профиль</span><svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
           </section>
         </div>
@@ -102,9 +106,6 @@
       <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.2v2.3M12 19.5v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.2 12h2.3M19.5 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
     </button>
-    <button class="profile-user-button" aria-label="Профиль">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
-    </button>
   </header>
 
   <div class="profile-layout">
@@ -117,18 +118,16 @@
     <main class="profile-main">
       <section class="profile-identity profile-panel">
         <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
-        <h1>Александр</h1><p class="profile-role">Ученик</p>
+        <h1>Иванова Мария Сергеевна</h1><p class="profile-role">Преподаватель</p>
         <div class="profile-contact-list">
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>alexandr@gmail.com</span></div>
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Иванов <small>Имя</small></span></div>
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Иванов <small>Фамилия</small></span></div>
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Иванович <small>Отчество</small></span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>m.ivanova@school.ru</span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Иванова Мария Сергеевна <small>ФИО</small></span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Математика <small>Дисциплина преподавания</small></span></div>
         </div>
-        <div class="profile-role-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7 12 3l9 4-9 4z"/><path d="M7 10v5c0 2 2.3 4 5 4s5-2 5-4v-5"/></svg><span>Роль</span><strong>Ученик</strong></div>
       </section>
 
       <div class="profile-content">
-        <section class="profile-panel activity-panel"><h2>Активность ученика</h2><div class="activity-content"><div class="activity-months" id="activity-months"></div><div class="activity-legend"><span><i class="high"></i>Активность высокая</span><span><i class="medium"></i>Активность средняя</span><span><i class="low"></i>Активность низкая</span></div></div></section>
+        <section class="profile-panel activity-panel"><h2>Активность преподавателя</h2><div class="activity-content"><div class="activity-months" id="activity-months"></div><div class="activity-legend"><span><i class="high"></i>Активность высокая</span><span><i class="medium"></i>Активность средняя</span><span><i class="low"></i>Активность низкая</span></div></div></section>
         <section class="profile-panel statistics-panel"><h2>Общая статистика</h2><div class="stat-grid">
           <article class="stat-card"><span class="stat-icon">🏆</span><p>Лучшее задание</p><strong>№ 12</strong><small>(из всех учеников)</small></article>
           <article class="stat-card"><span class="stat-icon">☹</span><p>Худшее задание</p><strong>№ 7</strong><small>(из всех учеников)</small></article>

@@ -161,7 +161,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .dashboard-search input::placeholder { color: #9ba8c0; }
 .dashboard-search button { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--accent); cursor: pointer; }
 .dashboard-search button svg { width: 18px; height: 18px; }
-.dashboard-mini-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.dashboard-mini-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 
 /* ── Дашборд: ровно один экран, без прокрутки вниз при входе на сайт ──
    Стартовый экран укладывается в высоту окна: отступы, шрифты и элементы
@@ -227,11 +227,16 @@ button { -webkit-tap-highlight-color: transparent; }
   #screen-dashboard .dashboard-search input { min-height: clamp(30px, 4.6vh, 42px); }
   #screen-dashboard .dashboard-mini-cards {
     min-height: 0;
-    grid-template-rows: minmax(0, 1fr);
+    /* Карточки идут друг под другом (горизонтальные полосы как в макете) и делят
+       свободную высоту поровну, но не сжимаются меньше своего содержимого:
+       в очень низком окне вместо наложения карточек появляется прокрутка
+       (как у .recent-variants слева). */
+    grid-template-rows: repeat(2, minmax(min-content, 1fr));
+    overflow-y: auto;
     gap: clamp(14px, 2vh, 18px);
   }
   #screen-dashboard .mini-card { min-height: 0; padding: clamp(14px, 2.4vh, 22px); }
-  #screen-dashboard .mini-card h2 { margin-top: clamp(9px, 1.6vh, 18px); font-size: clamp(13px, 1.9vh, 16px); }
+  #screen-dashboard .mini-card h2 { margin-top: 0; font-size: clamp(13px, 1.9vh, 16px); }
   #screen-dashboard .mini-card p { margin-top: clamp(7px, 1.4vh, 14px); font-size: clamp(11.5px, 1.55vh, 13px); }
   #screen-dashboard .mini-card .dashboard-action { min-height: clamp(42px, 5.6vh, 50px); }
 }
@@ -242,8 +247,6 @@ button { -webkit-tap-highlight-color: transparent; }
 .profile-search input { width: 100%; height: 40px; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
 .profile-search input::placeholder { color: #7e93af; }
 .profile-search svg { width: 20px; flex: 0 0 auto; }
-.profile-user-button { display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 50%; background: var(--accent-soft); color: var(--accent); cursor: pointer; }
-.profile-user-button svg { width: 23px; }
 .profile-layout { display: flex; min-height: calc(100vh - 61px); background: #f8fbff; width: 100%; overflow-x: hidden; box-sizing: border-box; }
 .profile-sidebar { width: 100%; flex: 0 0 200px; padding: 25px 9px; border-right: 1px solid #dce7f6; background: #fff; }
 .profile-nav-item { display: flex; width: 100%; align-items: center; gap: 12px; margin-bottom: 8px; padding: 14px 16px; border: 0; border-radius: 10px; background: transparent; color: #4b617d; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -292,8 +295,11 @@ button { -webkit-tap-highlight-color: transparent; }
   .profile-layout { width: 100%; overflow-x: hidden; box-sizing: border-box; }
 }
 .mini-card { display: flex; min-height: 250px; flex-direction: column; align-items: flex-start; padding: 20px; }
-.mini-card h2 { margin-top: 18px; }
-.mini-card p { margin-top: 14px; color: #40557a; font-size: 13px; line-height: 1.6; }
+/* Заголовок карточки стоит в одной строке с иконкой (как .dashboard-card-heading
+   в «Поиске»), поэтому отступ сверху у h2 убран, а описание растягивается на всю
+   ширину карточки (иначе align-items: flex-start сжимал его по содержимому). */
+.mini-card h2 { margin-top: 0; }
+.mini-card p { margin-top: 14px; align-self: stretch; color: #40557a; font-size: 13px; line-height: 1.6; }
 .mini-card .dashboard-action { min-height: 50px; margin-top: auto; padding-inline: 22px; }
 
 .auth-header { position: relative; }
