@@ -732,13 +732,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-home]').forEach(logo => {
     logo.addEventListener('click', goHome);
   });
-  $('btn-profile-dashboard').addEventListener('click', () => showScreen('dashboard'));
-  $('btn-profile-variants').addEventListener('click', enterApp);
-  $('profile-search-form').addEventListener('submit', event => {
-    event.preventDefault();
-    state.searchQuery = $('profile-search-input').value;
-    enterApp();
-  });
   $('dashboard-search-form').addEventListener('submit', event => {
     event.preventDefault();
     state.searchQuery = $('dashboard-search-input').value;
