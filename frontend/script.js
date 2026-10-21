@@ -32,12 +32,36 @@ function isUploadModalOpen() {
   return !$('modal-upload').classList.contains('hidden');
 }
 
+// К какому экрану относится пункт меню в шапке («Варианты» — список, «Профиль» — профиль).
+const NAV_SECTIONS = { variants: ['list'], profile: ['profile'] };
+
+// Подсветка активного пункта меню: вызывается при каждом переключении экрана.
+function updateNavActive(screenName) {
+  document.querySelectorAll('[data-nav]').forEach(item => {
+    const isActive = (NAV_SECTIONS[item.dataset.nav] || []).includes(screenName);
+    item.classList.toggle('is-active', isActive);
+    if (isActive) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+}
+
+// Поля поиска дублируются в шапках, поэтому значение берём из state и
+// раскладываем по всем полям (включая карточку «Поиск» на главном экране).
+function syncSearchInputs() {
+  document.querySelectorAll('[data-menu-search-input]').forEach(input => {
+    input.value = state.searchQuery;
+  });
+  $('dashboard-search-input').value = state.searchQuery;
+}
+
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(screen => {
     const isActive = screen.id === `screen-${name}`;
     screen.classList.toggle('active', isActive);
     screen.classList.toggle('hidden', !isActive);
   });
+  updateNavActive(name);
+  syncSearchInputs();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -721,21 +745,45 @@ document.addEventListener('DOMContentLoaded', () => {
     loadVariants();
   }
 
+  // Профиль открывается с построением диаграмм активности — так же, как с главного экрана.
+  function goProfile() {
+    renderActivity();
+    showScreen('profile');
+  }
+
+  // Поиск из шапки и из карточки на главном экране работает одинаково:
+  // запоминаем запрос, раскладываем его по всем полям и уходим в список вариантов.
+  function runSearch(value) {
+    state.searchQuery = value;
+    syncSearchInputs();
+    enterApp();
+  }
+
   $('btn-auth-login').addEventListener('click', enterApp);
   $('btn-auth-register').addEventListener('click', enterApp);
   $('btn-open-all').addEventListener('click', enterApp);
   $('btn-dashboard-create').addEventListener('click', openModal);
-  $('btn-dashboard-profile').addEventListener('click', () => {
-    renderActivity();
-    showScreen('profile');
-  });
+  $('btn-dashboard-profile').addEventListener('click', goProfile);
   document.querySelectorAll('[data-home]').forEach(logo => {
     logo.addEventListener('click', goHome);
   });
+  // Пункты меню в шапке: «Варианты» открывает список, «Профиль» — профиль.
+  const navActions = { variants: enterApp, profile: goProfile };
+  document.querySelectorAll('[data-nav]').forEach(item => {
+    const action = navActions[item.dataset.nav];
+    if (action) item.addEventListener('click', action);
+  });
   $('dashboard-search-form').addEventListener('submit', event => {
     event.preventDefault();
-    state.searchQuery = $('dashboard-search-input').value;
-    enterApp();
+    runSearch($('dashboard-search-input').value);
+  });
+  // Поиск в шапке: Enter в поле или клик по лупе уводят в список вариантов с фильтром.
+  document.querySelectorAll('[data-menu-search]').forEach(form => {
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const input = form.querySelector('[data-menu-search-input]');
+      runSearch(input ? input.value : '');
+    });
   });
   $('btn-open-upload').addEventListener('click', openModal);
   $('btn-close-upload').addEventListener('click', closeModal);
