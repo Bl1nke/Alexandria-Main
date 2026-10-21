@@ -1,0 +1,6 @@
+<!-- Иконка вкладки Alexandria для тёмной темы: та же буква «A»,
+     но плитка окрашена в акцентный цвет — как [data-theme="dark"] .logo-icon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Alexandria">
+  <rect width="32" height="32" rx="8" fill="#5b8def" />
+  <path fill="#ffffff" fill-rule="evenodd" d="M10.3 21.8 L15 10.2 H17 L21.7 21.8 H19.22 L17.84 18.4 H14.16 L12.78 21.8 Z M16 13.85 L15.01 16.3 H16.99 Z" />
+</svg>
