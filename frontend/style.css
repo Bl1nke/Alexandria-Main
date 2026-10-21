@@ -92,6 +92,7 @@ button { -webkit-tap-highlight-color: transparent; }
   display: inline-flex;
   width: 38px;
   height: 38px;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
@@ -109,6 +110,89 @@ button { -webkit-tap-highlight-color: transparent; }
 .theme-icon-sun { display: none; }
 [data-theme="dark"] .theme-icon-sun { display: block; }
 [data-theme="dark"] .theme-icon-moon { display: none; }
+
+/* ── Меню навигации в шапке ─────────────────────────────────────────────
+   Пункты «Варианты / Профиль» и поиск стоят рядом с логотипом: слева у меню
+   отступ от надписи Alexandria, справа — зазор до кнопки темы (без него
+   строка поиска упиралась в кружок вплотную), а сам блок растягивается на
+   свободную ширину, поэтому кнопка темы остаётся у правого края. Строка поиска
+   повторяет вид карточки «Поиск» с главного экрана (`.dashboard-search`),
+   только компактнее — её высота совпадает с кнопкой темы, поэтому высота
+   шапки не меняется. */
+.header-menu {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin-left: clamp(12px, 2vw, 28px);
+  margin-right: clamp(10px, 1.4vw, 18px);
+}
+.menu-link {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.menu-link:hover,
+.menu-link.is-active { background: var(--accent-soft); color: var(--accent); }
+.menu-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.header-search {
+  display: flex;
+  flex: 0 1 300px;
+  min-width: 160px;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.header-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, .09); }
+.header-search input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+}
+.header-search input::placeholder { color: #9ba8c0; }
+.header-search button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+.header-search button svg { width: 18px; height: 18px; }
+
+/* На узком экране логотип и кнопка темы остаются в первой строке, а меню с
+   поиском целиком уезжает во вторую (поиск растягивается на всю ширину),
+   иначе элементы шапки сжимались бы до нечитаемого состояния. */
+@media (max-width: 900px) {
+  #screen-list .app-header,
+  #screen-profile .app-header { flex-wrap: wrap; row-gap: 10px; }
+  #screen-list .header-menu,
+  #screen-profile .header-menu { order: 3; flex-basis: 100%; flex-wrap: wrap; margin-left: 0; margin-right: 0; gap: 8px; }
+  /* Базовая ширина 180px позволяет поиску остаться в одной строке с пунктами меню,
+     а когда места мало (узкий телефон) — перенестись на всю ширину шапки; иначе
+     поле вылезало за правый край и появлялась горизонтальная прокрутка. */
+  #screen-list .header-search,
+  #screen-profile .header-search { flex: 1 1 180px; }
+}
 
 .dashboard-main {
   width: min(100%, 1080px);
@@ -1207,6 +1291,8 @@ button { -webkit-tap-highlight-color: transparent; }
 [data-theme="dark"] .dashboard-action:hover { background: #22314d; }
 [data-theme="dark"] .dashboard-search { background: var(--surface-soft); }
 [data-theme="dark"] .dashboard-search input::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .header-search { background: var(--surface-soft); }
+[data-theme="dark"] .header-search input::placeholder { color: var(--text-muted); }
 [data-theme="dark"] .mini-card p { color: var(--text-mid); }
 
 /* Список вариантов */
