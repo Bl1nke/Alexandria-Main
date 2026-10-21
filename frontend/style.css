@@ -793,15 +793,47 @@ button { -webkit-tap-highlight-color: transparent; }
   transition: border-color .15s ease, color .15s ease, background .15s ease;
 }
 .btn-ghost:hover { border-color: var(--ink); background: var(--surface-hover); color: var(--ink); }
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, .45);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
+/* ─── Прогресс загрузки варианта: кольцо с процентами ─── */
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 28px 28px;
+  text-align: center;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+.progress-ring { position: relative; width: 148px; height: 148px; }
+.progress-ring svg { width: 100%; height: 100%; }
+.progress-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.progress-pct { font-family: var(--font-mono); font-size: 26px; font-weight: 800; line-height: 1; }
+.progress-phase {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.progress-note { max-width: 380px; color: var(--text-mid); font-size: 14px; }
+.progress-cancel { width: 100%; max-width: 240px; margin-top: 4px; }
+
+/* Фаза серверной обработки: точного прогресса нет — «бегущая» дуга кольца.
+   Анимируем stroke-dashoffset, а не transform: так дуга всегда лежит на окружности. */
+.progress-ring.is-indeterminate #upload-arc {
+  stroke-dasharray: 90 236.7;
+  animation: progress-dash 1.15s linear infinite;
+}
+@keyframes progress-dash {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -326.7; }
+}
 
 .solver-header {
   position: sticky;
@@ -1227,6 +1259,8 @@ button { -webkit-tap-highlight-color: transparent; }
   .modal-head { padding: 22px 20px 0; }
   .modal-body { padding: 20px; }
   .modal-foot { padding: 0 20px 20px; flex-direction: column-reverse; }
+  .upload-progress { padding: 4px 20px 20px; }
+  .progress-ring { width: 128px; height: 128px; }
   .btn-ghost,
   .btn-upload { width: 100%; }
   .solver-header { flex-wrap: wrap; }

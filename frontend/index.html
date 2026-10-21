@@ -305,7 +305,7 @@
       </button>
     </div>
 
-    <div class="modal-body">
+    <div class="modal-body" id="upload-form-body">
       <div class="drop-zone" id="zone-variant" data-target="variant">
         <input type="file" id="input-variant" accept=".pdf,.docx" hidden />
         <div class="dz-icon" aria-hidden="true">
@@ -327,12 +327,30 @@
       </div>
     </div>
 
-    <div class="modal-foot">
+    <!-- Прогресс загрузки: во время передачи файлов заменяет форму и кнопки модалки -->
+    <div class="upload-progress hidden" id="upload-progress" aria-live="polite">
+      <div class="progress-ring" id="upload-progress-bar" role="progressbar"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Прогресс загрузки">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="8"/>
+          <circle id="upload-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                  transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="progress-center">
+          <span class="progress-pct" id="upload-progress-pct">0%</span>
+          <span class="progress-phase" id="upload-progress-phase">Загрузка</span>
+        </div>
+      </div>
+
+      <p class="progress-note" id="upload-progress-note">Передаём файлы на сервер…</p>
+
+      <button class="btn-ghost progress-cancel" id="btn-cancel-progress">Отменить загрузку</button>
+    </div>
+
+    <div class="modal-foot" id="upload-form-foot">
       <button class="btn-ghost" id="btn-cancel-upload">Отмена</button>
-      <button class="btn-upload" id="btn-submit-upload">
-        <span id="upload-btn-text">Загрузить и обработать</span>
-        <span id="upload-spinner" class="spinner hidden"></span>
-      </button>
+      <button class="btn-upload" id="btn-submit-upload">Загрузить и обработать</button>
     </div>
   </div>
 </div>

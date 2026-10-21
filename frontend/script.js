@@ -72,6 +72,8 @@ function goHome() {
 }
 
 function openModal() {
+  // Модалка всегда открывается в исходном виде, даже если прошлая загрузка сорвалась.
+  resetUploadProgress();
   state.files = { variant: null, answers: null };
   ['variant', 'answers'].forEach(key => {
     $(`zone-${key}`).classList.remove('has-file');
@@ -85,6 +87,9 @@ function openModal() {
 }
 
 function closeModal(fromHistory = false) {
+  // Во время передачи файлов закрываем модалку только через «Отменить загрузку»,
+  // иначе XHR продолжит отправку данных в никуда.
+  if (isUploading()) return;
   $('modal-upload').classList.add('hidden');
   if (!fromHistory && history.state?.modal === 'upload') {
     history.back();
@@ -118,6 +123,261 @@ function setupDrop(zoneId, inputId, nameId, key) {
   }
 }
 
+// ─── ЗАГРУЗКА С ПРОГРЕССОМ ───────────────────────────────────
+// fetch не умеет сообщать о прогрессе отдачи, поэтому файлы варианта
+// отправляем через XMLHttpRequest — он даёт события о переданных байтах.
+const UPLOAD_TIMEOUT_MS = 180000;
+const RING_CIRCUMFERENCE = 326.7; // 2πr при r = 52 — как у кольца на экране результатов
+
+// Ползунок делится на два «бюджета»: передача байтов и разбор документов на
+// сервере. Про разбор сервер ничего не сообщает, поэтому до 100% кольцо не
+// доходит, пока не придёт ответ: так 100% совпадает с концом загрузки.
+const TRANSFER_SHARE = 20;     // сколько процентов кольца отдано передаче файлов
+const PROCESS_LINEAR_END = 95; // к этой отметке кольцо доходит к моменту оценки
+const PROCESS_CEILING = 99;    // предел, пока сервер не ответил
+const PROCESS_ESTIMATE_BASE = 11000;   // базовая оценка разбора, мс (27 заданий)
+const PROCESS_ESTIMATE_PER_MB = 3000;  // добавка к оценке за каждый МБ файлов
+
+const uploadProgress = {
+  xhr: null,
+  rafId: null,
+  phase: 'idle',  // idle → upload (передача) → processing (разбор) → done
+  percent: 0,     // сглаженный процент для кольца
+  target: 0,      // куда стремится кольцо
+  loaded: 0,
+  total: 0,
+  renderedPct: null,
+  processingStartedAt: 0,   // начало оценочной фазы обработки
+  estimatedProcessingMs: 0, // оценка длительности разбора документов
+};
+
+// Отмена загрузки — не ошибка: интерфейс просто возвращается к форме.
+class UploadCancelled extends Error {
+  constructor() {
+    super('Загрузка отменена');
+    this.name = 'UploadCancelled';
+  }
+}
+
+function isUploading() {
+  return Boolean(uploadProgress.xhr);
+}
+
+// Фаза 1 — передача файлов (процент известен). Фаза 2 — разбор документов
+// на сервере: Flask о нём не сообщает, поэтому кольцо заполняется по оценке
+// времени (см. updateUploadTarget), а не крутится как индикатор ожидания.
+function setUploadPhase(phase) {
+  const processing = phase === 'processing';
+  $('upload-progress-phase').textContent = processing ? 'Обработка' : 'Загрузка';
+  $('upload-progress-note').textContent = processing
+    ? 'Файлы переданы. Сервер разбирает документы — это может занять пару минут.'
+    : 'Передаём файлы на сервер…';
+}
+
+function renderUploadProgress() {
+  const p = uploadProgress;
+  const pct = Math.round(p.percent);
+  if (pct !== p.renderedPct) {
+    p.renderedPct = pct;
+    $('upload-progress-pct').textContent = `${pct}%`;
+    $('upload-progress-bar').setAttribute('aria-valuenow', String(pct));
+    $('upload-arc').style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - p.percent / 100));
+  }
+}
+
+// Оценка длительности серверного разбора (pdfplumber + fitz + PIL на 27 заданий).
+// Основная работа фиксирована (27 заданий), поэтому база велика, а размер файла
+// даёт лишь добавку. От оценки зависит скорость заполнения кольца.
+function estimateProcessingMs(bytes) {
+  const megabytes = (bytes || 0) / 1048576;
+  return Math.min(90000, Math.max(6000, PROCESS_ESTIMATE_BASE + megabytes * PROCESS_ESTIMATE_PER_MB));
+}
+
+// Целевой процент кольца для текущей фазы. Передача идёт по реальным байтам
+// (их задаёт XHR), обработка — по оценке времени: сначала кольцо заполняется
+// равномерно (линейно) до PROCESS_LINEAR_END к моменту оценки, а если разбор
+// идёт дольше — мягко дотягивает до PROCESS_CEILING. До 100% дело доходит
+// только по ответу сервера, поэтому 100% совпадает с концом загрузки.
+function updateUploadTarget(now) {
+  const p = uploadProgress;
+  if (p.phase === 'done') {
+    p.target = 100;
+    return;
+  }
+  if (p.phase !== 'processing') return;
+
+  const elapsed = Math.max(0, now - p.processingStartedAt);
+  const estimate = Math.max(1, p.estimatedProcessingMs);
+
+  if (elapsed <= estimate) {
+    p.target = TRANSFER_SHARE + (PROCESS_LINEAR_END - TRANSFER_SHARE) * (elapsed / estimate);
+  } else {
+    const over = (elapsed - estimate) / (estimate * 0.5);
+    p.target = PROCESS_LINEAR_END + (PROCESS_CEILING - PROCESS_LINEAR_END) * (1 - Math.exp(-over));
+  }
+}
+
+// Проценты «догоняют» целевые значения плавно: на localhost передача
+// завершается мгновенно, без сглаживания кольцо просто не было бы видно.
+function tickUploadProgress() {
+  const p = uploadProgress;
+  updateUploadTarget(performance.now());
+  const diff = p.target - p.percent;
+  p.percent = Math.abs(diff) < 0.4 ? p.target : p.percent + diff * 0.18;
+  renderUploadProgress();
+  p.rafId = requestAnimationFrame(tickUploadProgress);
+}
+
+function startUploadProgress(totalBytes) {
+  const p = uploadProgress;
+  p.phase = 'upload';
+  p.percent = 0;
+  p.target = 0;
+  p.loaded = 0;
+  p.total = totalBytes || 0;
+  p.renderedPct = null;
+  p.processingStartedAt = 0;
+  p.estimatedProcessingMs = estimateProcessingMs(p.total);
+  $('upload-arc').style.strokeDashoffset = String(RING_CIRCUMFERENCE);
+  $('upload-progress-bar').setAttribute('aria-valuenow', '0');
+  setUploadPhase('upload');
+  renderUploadProgress();
+  p.rafId = requestAnimationFrame(tickUploadProgress);
+}
+
+// Передача завершилась — переходим к оценочной фазе разбора документов.
+function beginProcessingPhase() {
+  const p = uploadProgress;
+  if (p.phase === 'processing' || p.phase === 'done') return;
+  p.phase = 'processing';
+  p.processingStartedAt = performance.now();
+  setUploadPhase('processing');
+}
+
+// Ответ сервера получен: доводим кольцо до 100% и даём его увидеть.
+function finishUploadProgress() {
+  const p = uploadProgress;
+  p.phase = 'done';
+  p.target = 100;
+  const deadline = performance.now() + 700; // страховка от зависания ожидания
+  return new Promise(resolve => {
+    const wait = () => {
+      if (p.percent >= 99.9 || performance.now() >= deadline) {
+        setTimeout(resolve, 250); // короткая пауза, чтобы 100% успели показаться
+      } else {
+        setTimeout(wait, 40);
+      }
+    };
+    wait();
+  });
+}
+
+function stopUploadProgress() {
+  if (uploadProgress.rafId) cancelAnimationFrame(uploadProgress.rafId);
+  uploadProgress.rafId = null;
+}
+
+function enterProgressMode() {
+  $('upload-title').textContent = 'Загрузка варианта';
+  // Крестик закрытия на время передачи убираем: выйти можно только через отмену.
+  $('btn-close-upload').classList.add('hidden');
+  $('upload-form-body').classList.add('hidden');
+  $('upload-form-foot').classList.add('hidden');
+  $('upload-progress').classList.remove('hidden');
+}
+
+// Возвращает модалку к форме: вызывается и после успеха, и после ошибки, и после отмены.
+function resetUploadProgress() {
+  const p = uploadProgress;
+  stopUploadProgress();
+  p.xhr = null;
+  p.phase = 'idle';
+  p.percent = 0;
+  p.target = 0;
+  p.loaded = 0;
+  p.total = 0;
+  p.renderedPct = null;
+  p.processingStartedAt = 0;
+  p.estimatedProcessingMs = 0;
+  $('upload-progress').classList.add('hidden');
+  $('upload-progress-bar').classList.remove('is-indeterminate');
+  $('upload-progress-bar').setAttribute('aria-valuenow', '0');
+  $('upload-arc').style.strokeDashoffset = String(RING_CIRCUMFERENCE);
+  $('upload-progress-pct').textContent = '0%';
+  $('upload-progress-phase').textContent = 'Загрузка';
+  $('upload-progress-note').textContent = 'Передаём файлы на сервер…';
+  $('upload-title').textContent = 'Загрузить вариант';
+  $('btn-submit-upload').disabled = false;
+  $('btn-close-upload').classList.remove('hidden');
+  $('upload-form-body').classList.remove('hidden');
+  $('upload-form-foot').classList.remove('hidden');
+}
+
+function uploadWithProgress(url, form, handlers = {}, ms = UPLOAD_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const p = uploadProgress;
+    const xhr = new XMLHttpRequest();
+    p.xhr = xhr;
+    const release = () => { if (p.xhr === xhr) p.xhr = null; };
+
+    xhr.open('POST', url);
+    xhr.timeout = ms;
+
+    xhr.upload.addEventListener('progress', event => {
+      if (!event.lengthComputable) return;
+      const total = event.total || p.total;
+      p.loaded = event.loaded;
+      p.total = total;
+      // Передаче отдана только часть кольца (TRANSFER_SHARE): 100% покажем лишь
+      // по ответу сервера, когда разбор документов уже завершён.
+      if (p.phase === 'upload') {
+        p.target = total ? Math.min(TRANSFER_SHARE, (event.loaded / total) * TRANSFER_SHARE) : 0;
+      }
+    });
+
+    // Все байты ушли на сервер, но он ещё парсит PDF/DOCX — точного прогресса нет,
+    // поэтому дальше кольцо заполняется по оценке времени (см. updateUploadTarget).
+    xhr.upload.addEventListener('load', () => {
+      p.loaded = p.total;
+      beginProcessingPhase();
+      if (handlers.onProcessing) handlers.onProcessing();
+    });
+
+    xhr.addEventListener('load', () => {
+      release();
+      let data = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch { /* сервер вернул не JSON — разберёмся по статусу ответа */ }
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data });
+    });
+    xhr.addEventListener('error', () => {
+      release();
+      reject(new Error('Нет соединения. Запустите сервер командой: python server.py'));
+    });
+    xhr.addEventListener('timeout', () => {
+      release();
+      reject(new Error(`Сервер не ответил за ${ms / 1000} с. Flask запущен?`));
+    });
+    xhr.addEventListener('abort', () => {
+      release();
+      reject(new UploadCancelled());
+    });
+
+    // Фолбэк: если события о переданных байтах так и не пришли, всё равно
+    // запускаем оценочную фазу, чтобы кольцо не застыло на нуле.
+    setTimeout(() => {
+      if (p.xhr === xhr && p.loaded === 0) beginProcessingPhase();
+    }, 800);
+
+    xhr.send(form);
+  });
+}
+
+function cancelUpload() {
+  if (uploadProgress.xhr) uploadProgress.xhr.abort();
+}
+
 async function upload() {
   const { variant, answers } = state.files;
   if (!variant || !answers) {
@@ -125,36 +385,36 @@ async function upload() {
     return;
   }
 
-  const btn = $('btn-submit-upload');
-  const label = $('upload-btn-text');
-  const spin = $('upload-spinner');
-  btn.disabled = true;
-  label.textContent = 'Обработка...';
-  spin.classList.remove('hidden');
+  const form = new FormData();
+  form.append('variant', variant);
+  form.append('answers', answers);
+
+  // Пока идёт передача файлов, вместо формы показываем кольцо с процентами.
+  $('btn-submit-upload').disabled = true;
+  enterProgressMode();
+  startUploadProgress(variant.size + answers.size);
 
   try {
-    const form = new FormData();
-    form.append('variant', variant);
-    form.append('answers', answers);
+    const res = await uploadWithProgress(`${API}/upload`, form, {
+      onProcessing: () => setUploadPhase('processing'),
+    });
 
-    const res = await apiFetch(`${API}/upload`, { method: 'POST', body: form }, 180000);
-    let data;
-    try {
-      data = await res.json();
-    } catch {
+    if (!res.data) {
       throw new Error(`HTTP ${res.status}. Сервер вернул не JSON. Проверьте консоль Flask.`);
     }
-    if (!res.ok) throw new Error((data.error || `HTTP ${res.status}`) + (data.details ? `\n${data.details}` : ''));
+    if (!res.ok) {
+      throw new Error((res.data.error || `HTTP ${res.status}`) + (res.data.details ? `\n${res.data.details}` : ''));
+    }
 
+    await finishUploadProgress();
+    resetUploadProgress();
     closeModal();
     await loadVariants();
   } catch (e) {
+    resetUploadProgress();
+    if (e.name === 'UploadCancelled') return;
     console.error(e);
     alert(`Ошибка загрузки\n\n${e.message}`);
-  } finally {
-    btn.disabled = false;
-    label.textContent = 'Загрузить и обработать';
-    spin.classList.add('hidden');
   }
 }
 
@@ -792,13 +1052,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.target === $('modal-upload')) closeModal();
   });
   window.addEventListener('popstate', () => {
-    if (isUploadModalOpen()) closeModal(true);
+    if (isUploadModalOpen() && !isUploading()) closeModal(true);
   });
 
   setupDrop('zone-variant', 'input-variant', 'name-variant', 'variant');
   setupDrop('zone-answers', 'input-answers', 'name-answers', 'answers');
 
   $('btn-submit-upload').addEventListener('click', upload);
+  $('btn-cancel-progress').addEventListener('click', cancelUpload);
   $('btn-back').addEventListener('click', () => {
     showScreen('list');
     loadVariants();
