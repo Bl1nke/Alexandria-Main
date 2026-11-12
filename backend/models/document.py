@@ -1,7 +1,8 @@
 """Модели документа и его элементов.
 
 Единое представление результата извлечения для PDF и DOCX. В DOCX нет
-координат, поэтому все поля bbox необязательные.
+координат в том смысле, в котором они есть в PDF, поэтому все поля bbox
+необязательные (``None`` означает «координаты недоступны», а не «нуль»).
 """
 
 from __future__ import annotations
@@ -41,7 +42,15 @@ class BBox:
 
 @dataclass
 class TextBlock:
-    """Фрагмент текста из документа (строка PDF или абзац DOCX)."""
+    """Фрагмент текста из документа.
+
+    Для PDF это блок текста с координатами; для DOCX — абзац, у которого
+    координат нет (``bbox = None``). ``block_type`` различает абзацы,
+    заголовки, элементы списков и подписи. ``extraction_index`` хранит
+    порядок, в котором блок был извлечён из исходного документа (может
+    отличаться от ``order`` — порядка чтения, который проставляет
+    layout-анализ).
+    """
 
     text: str
     page: int
@@ -49,28 +58,52 @@ class TextBlock:
     font_size: Optional[float] = None
     is_bold: bool = False
     order: Optional[int] = None
+    id: str = ""
+    block_type: str = "paragraph"
+    level: Optional[int] = None
+    font_name: Optional[str] = None
+    is_italic: bool = False
+    source: str = ""
+    extraction_index: Optional[int] = None
 
     def to_dict(self) -> Dict[str, object]:
         """Сериализует блок в словарь."""
         return {
+            "id": self.id,
             "text": self.text,
             "page": self.page,
             "bbox": self.bbox.to_dict() if self.bbox else None,
             "font_size": self.font_size,
+            "font_name": self.font_name,
             "is_bold": self.is_bold,
+            "is_italic": self.is_italic,
+            "block_type": self.block_type,
+            "level": self.level,
+            "source": self.source,
             "order": self.order,
+            "extraction_index": self.extraction_index,
         }
 
 
 @dataclass
 class ImageRef:
-    """Ссылка на изображение документа (данные могут загружаться лениво)."""
+    """Ссылка на изображение документа.
+
+    ``path`` указывает на сохранённый файл (если извлечение писалось на
+    диск), ``format`` — исходный формат. ``data`` заполняется только когда
+    изображение удерживается в памяти; для больших документов бинарные
+    данные не хранятся (работа с изображениями ведётся последовательно).
+    """
 
     id: str
     page: int
     bbox: Optional[BBox] = None
     mime: str = "image/png"
     data: Optional[bytes] = None
+    path: Optional[str] = None
+    format: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
 
     def to_dict(self) -> Dict[str, object]:
         """Сериализует метаданные изображения (без бинарных данных)."""
@@ -79,24 +112,106 @@ class ImageRef:
             "page": self.page,
             "bbox": self.bbox.to_dict() if self.bbox else None,
             "mime": self.mime,
+            "format": self.format,
+            "path": self.path,
+            "width": self.width,
+            "height": self.height,
             "has_data": self.data is not None,
         }
 
 
 @dataclass
+class TableCell:
+    """Ячейка таблицы с позицией в сетке и (по возможности) координатами."""
+
+    row: int
+    col: int
+    text: str
+    row_span: int = 1
+    col_span: int = 1
+    bbox: Optional[BBox] = None
+
+    def to_dict(self) -> Dict[str, object]:
+        """Сериализует ячейку в словарь."""
+        return {
+            "row": self.row,
+            "col": self.col,
+            "text": self.text,
+            "row_span": self.row_span,
+            "col_span": self.col_span,
+            "bbox": self.bbox.to_dict() if self.bbox else None,
+        }
+
+
+@dataclass
+class Table:
+    """Таблица документа с сохранением структуры строк и столбцов.
+
+    ``rows`` — список строк, каждая строка — список :class:`TableCell`.
+    Для PDF ячейки могут иметь координаты, для DOCX — нет.
+    """
+
+    id: str
+    page: int
+    bbox: Optional[BBox] = None
+    rows: List[List[TableCell]] = field(default_factory=list)
+    order: Optional[int] = None
+    source: str = ""
+
+    @property
+    def n_rows(self) -> int:
+        """Количество строк таблицы."""
+        return len(self.rows)
+
+    @property
+    def n_cols(self) -> int:
+        """Количество столбцов (по самой длинной строке)."""
+        return max((len(row) for row in self.rows), default=0)
+
+    def text(self) -> str:
+        """Текст таблицы: строки, склеенные из ячеек через ``|``."""
+        return "\n".join(" | ".join(cell.text for cell in row) for row in self.rows)
+
+    def to_dict(self) -> Dict[str, object]:
+        """Сериализует таблицу в словарь."""
+        return {
+            "id": self.id,
+            "page": self.page,
+            "bbox": self.bbox.to_dict() if self.bbox else None,
+            "n_rows": self.n_rows,
+            "n_cols": self.n_cols,
+            "order": self.order,
+            "source": self.source,
+            "rows": [[cell.to_dict() for cell in row] for row in self.rows],
+        }
+
+
+@dataclass
 class Page:
-    """Страница документа (для DOCX — одна логическая страница)."""
+    """Страница документа (для DOCX — логическая страница)."""
 
     number: int
     width: float
     height: float
     blocks: List[TextBlock] = field(default_factory=list)
     images: List[ImageRef] = field(default_factory=list)
+    tables: List[Table] = field(default_factory=list)
+    needs_ocr: bool = False
 
     @property
     def has_text(self) -> bool:
         """Есть ли на странице непустой текст."""
         return any(block.text.strip() for block in self.blocks)
+
+    @property
+    def has_images(self) -> bool:
+        """Есть ли на странице изображения."""
+        return bool(self.images)
+
+    @property
+    def block_count(self) -> int:
+        """Количество текстовых блоков на странице."""
+        return len(self.blocks)
 
     def text(self) -> str:
         """Текст страницы, собранный из блоков в их текущем порядке."""
@@ -108,20 +223,30 @@ class Page:
             "number": self.number,
             "width": self.width,
             "height": self.height,
+            "block_count": self.block_count,
+            "has_images": self.has_images,
+            "needs_ocr": self.needs_ocr,
             "blocks": [block.to_dict() for block in self.blocks],
             "images": [image.to_dict() for image in self.images],
+            "tables": [table.to_dict() for table in self.tables],
         }
 
 
 @dataclass
 class Document:
-    """Загруженный документ: страницы, метаданные, уверенность."""
+    """Загруженный документ: страницы, метаданные, уверенность.
+
+    ``warnings`` — нефатальные замечания извлечения (например, «страница
+    требует OCR»), ``errors`` — сообщения об ошибках, которые удалось
+    пережить (например, не удалось сохранить изображение на диск).
+    """
 
     source_path: str
     doc_type: DocType
     pages: List[Page] = field(default_factory=list)
     metadata: Dict[str, object] = field(default_factory=dict)
     warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
     confidence: Confidence = Confidence.HIGH
 
     @property
@@ -133,6 +258,20 @@ class Document:
         """Итератор по всем текстовым блокам всех страниц."""
         for page in self.pages:
             yield from page.blocks
+
+    def tables(self) -> Iterator[Table]:
+        """Итератор по всем таблицам всех страниц."""
+        for page in self.pages:
+            yield from page.tables
+
+    def images(self) -> Iterator[ImageRef]:
+        """Итератор по всем изображениям всех страниц."""
+        for page in self.pages:
+            yield from page.images
+
+    def pages_needing_ocr(self) -> List[int]:
+        """Номера страниц, отмеченных как требующие OCR."""
+        return [page.number for page in self.pages if page.needs_ocr]
 
     def text(self) -> str:
         """Полный текст документа."""
@@ -146,6 +285,8 @@ class Document:
             "page_count": self.page_count,
             "metadata": dict(self.metadata),
             "warnings": list(self.warnings),
+            "errors": list(self.errors),
+            "pages_needing_ocr": self.pages_needing_ocr(),
             "confidence": self.confidence.value,
             "pages": [page.to_dict() for page in self.pages],
         }

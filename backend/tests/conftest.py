@@ -150,3 +150,195 @@ def real_answers_pdf():
     if not path:
         pytest.skip("Реальный образец answers_raw.pdf отсутствует в backend/uploads")
     return path
+
+# ─── PDF: расширенные фикстуры (Этап 2) ──────────────────────
+
+
+def _make_png_bytes(width: int = 60, height: int = 40, color=(200, 30, 30)) -> bytes:
+    """Создаёт небольшое PNG-изображение в памяти."""
+    import io
+
+    from PIL import Image
+
+    image = Image.new("RGB", (width, height), color)
+    buffer = io.BytesIO()
+    image.save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+@pytest.fixture
+def multipage_pdf(tmp_path) -> str:
+    """PDF с несколькими страницами текста."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    for index in range(1, 4):
+        page = doc.new_page(width=595, height=842)
+        page.insert_text((72, 80), f"Page {index} first line", fontsize=12)
+        page.insert_text((72, 100), f"Page {index} second line", fontsize=12)
+    path = tmp_path / "multipage.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def table_pdf(tmp_path) -> str:
+    """PDF с таблицей, нарисованной рамками."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    xs = [72.0, 200.0, 280.0]
+    ys = [72.0, 100.0, 128.0, 156.0]
+    for x in xs:
+        page.draw_line((x, ys[0]), (x, ys[-1]))
+    for y in ys:
+        page.draw_line((xs[0], y), (xs[-1], y))
+    data = [["N", "answer"], ["1", "134"], ["2", "word"]]
+    for row_index, row in enumerate(data):
+        for col_index, value in enumerate(row):
+            page.insert_text((xs[col_index] + 4, ys[row_index] + 18), value, fontsize=11)
+    path = tmp_path / "table.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def image_pdf(tmp_path) -> str:
+    """PDF с одним встроенным изображением (без текстового слоя)."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=300, height=300)
+    page.insert_image(pymupdf.Rect(50, 50, 150, 120), stream=_make_png_bytes())
+    path = tmp_path / "image.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def scanned_pdf(tmp_path) -> str:
+    """PDF-«скан»: картинка на всю страницу и нет текстового слоя."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_image(
+        pymupdf.Rect(0, 0, 595, 842), stream=_make_png_bytes(200, 280, (240, 240, 240))
+    )
+    path = tmp_path / "scanned.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def two_column_pdf(tmp_path) -> str:
+    """PDF с двумя колонками текста (левая и правая)."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    for index in range(3):
+        page.insert_text((60, 80 + index * 18), f"left column line {index}", fontsize=11)
+        page.insert_text((330, 80 + index * 18), f"right column line {index}", fontsize=11)
+    path = tmp_path / "two_column.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def corrupted_pdf(tmp_path) -> str:
+    """«PDF» с корректной сигнатурой, но повреждённым содержимым."""
+    path = tmp_path / "corrupted.pdf"
+    path.write_bytes(b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailing junk")
+    return str(path)
+
+
+# ─── DOCX: расширенные фикстуры (Этап 2) ─────────────────────
+
+
+@pytest.fixture
+def docx_with_image(tmp_path) -> str:
+    """DOCX с абзацем и встроенным изображением."""
+    import io
+
+    from docx import Document as DocxDocument
+
+    document = DocxDocument()
+    document.add_paragraph("Paragraph before image")
+    document.add_picture(io.BytesIO(_make_png_bytes()))
+    document.add_paragraph("Paragraph after image")
+
+    path = tmp_path / "with_image.docx"
+    document.save(str(path))
+    return str(path)
+
+
+@pytest.fixture
+def multipage_docx(tmp_path) -> str:
+    """DOCX с явным разрывом страницы между двумя абзацами."""
+    from docx import Document as DocxDocument
+
+    document = DocxDocument()
+    document.add_paragraph("First page content")
+    document.add_page_break()
+    document.add_paragraph("Second page content")
+
+    path = tmp_path / "multipage.docx"
+    document.save(str(path))
+    return str(path)
+
+
+@pytest.fixture
+def styled_docx(tmp_path) -> str:
+    """DOCX с заголовком, списком и жирным/курсивным текстом."""
+    from docx import Document as DocxDocument
+
+    document = DocxDocument()
+    document.add_heading("Big Heading", level=1)
+    document.add_paragraph("Bullet item", style="List Bullet")
+    paragraph = document.add_paragraph()
+    bold_run = paragraph.add_run("bold part")
+    bold_run.bold = True
+    italic_run = paragraph.add_run(" italic part")
+    italic_run.italic = True
+
+    path = tmp_path / "styled.docx"
+    document.save(str(path))
+    return str(path)
+
+
+@pytest.fixture
+def mixed_docx(tmp_path) -> str:
+    """DOCX со смешанным содержимым: абзац, таблица, изображение."""
+    import io
+
+    from docx import Document as DocxDocument
+
+    document = DocxDocument()
+    document.add_paragraph("Intro paragraph")
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "word"
+    table.cell(0, 1).text = "meaning"
+    table.cell(1, 0).text = "alpha"
+    table.cell(1, 1).text = "beta"
+    document.add_picture(io.BytesIO(_make_png_bytes()))
+    document.add_paragraph("Outro paragraph")
+
+    path = tmp_path / "mixed.docx"
+    document.save(str(path))
+    return str(path)
+
+
+@pytest.fixture
+def corrupted_docx(tmp_path) -> str:
+    """«DOCX» с корректной ZIP-сигнатурой, но повреждённым содержимым."""
+    path = tmp_path / "corrupted.docx"
+    path.write_bytes(b"PK\x03\x04garbagegarbage")
+    return str(path)
+

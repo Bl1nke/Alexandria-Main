@@ -6,6 +6,7 @@ import pytest
 
 from models.validation import Confidence
 from parser.document_loader import (
+    DocumentReadError,
     UnsupportedFormatError,
     detect_doc_type,
     get_extractor,
@@ -75,3 +76,22 @@ def test_get_extractor_returns_matching_extractor():
 def test_pdf_confidence_is_high_for_text_document(sample_pdf):
     document = load_document(sample_pdf)
     assert document.confidence is Confidence.HIGH
+
+
+def test_corrupted_pdf_raises_read_error(corrupted_pdf):
+    # Повреждённый PDF не должен считаться успешно загруженным.
+    with pytest.raises(DocumentReadError):
+        load_document(corrupted_pdf)
+
+
+def test_corrupted_docx_raises_read_error(corrupted_docx):
+    with pytest.raises(DocumentReadError):
+        load_document(corrupted_docx)
+
+
+def test_image_dir_is_passed_to_extractor(image_pdf, tmp_path):
+    document = load_document(image_pdf, image_dir=str(tmp_path))
+    images = list(document.images())
+    assert images
+    assert all(image.path for image in images)
+

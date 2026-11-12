@@ -18,14 +18,30 @@ class UnsupportedFormatError(ValueError):
     """Формат файла не поддерживается парсером."""
 
 
+class DocumentReadError(RuntimeError):
+    """Документ найден и распознан, но не может быть прочитан или разобран.
+
+    Возникает при повреждённых файлах и ошибках открытия/парсинга.
+    Используется, чтобы повреждённый или нечитаемый файл НЕ мог быть
+    обработан как успешно загруженный.
+    """
+
+
 @runtime_checkable
 class DocumentExtractor(Protocol):
     """Единый интерфейс экстрактора содержимого документа."""
 
     extensions: Tuple[str, ...]
 
-    def extract(self, path: str) -> Document:
-        """Извлекает содержимое файла в модель :class:`Document`."""
+    def extract(self, path: str, *, image_dir: Optional[str] = None) -> Document:
+        """Извлекает содержимое файла в модель :class:`Document`.
+
+        Args:
+            path: путь к файлу.
+            image_dir: каталог для сохранения встроенных изображений. Если
+                ``None``, изображения не записываются на диск (их метаданные,
+                включая координаты и формат, всё равно извлекаются).
+        """
         ...
 
 
@@ -94,8 +110,35 @@ def get_extractor(doc_type: str) -> DocumentExtractor:
     raise UnsupportedFormatError(f"Нет экстрактора для типа: {doc_type}")
 
 
-def load_document(path: str) -> Document:
-    """Загружает документ, определяя формат и применяя нужный экстрактор."""
+def load_document(path: str, *, image_dir: Optional[str] = None) -> Document:
+    """Загружает документ, определяя формат и применяя нужный экстрактор.
+
+    Args:
+        path: путь к PDF или DOCX файлу.
+        image_dir: каталог для сохранения встроенных изображений (необязательно).
+
+    Returns:
+        Унифицированная модель :class:`Document`.
+
+    Raises:
+        UnsupportedFormatError: файл не найден или формат не поддерживается.
+        DocumentReadError: файл найден и распознан, но не может быть
+            прочитан, разобран или не содержит ни одной страницы.
+    """
     doc_type = detect_doc_type(path)
     extractor = get_extractor(doc_type)
-    return extractor.extract(path)
+    try:
+        document = extractor.extract(path, image_dir=image_dir)
+    except (UnsupportedFormatError, DocumentReadError):
+        raise
+    except Exception as exc:  # noqa: BLE001 — унифицируем любую ошибку чтения
+        raise DocumentReadError(
+            f"Не удалось прочитать документ «{os.path.basename(path)}»: {exc}"
+        ) from exc
+
+    if not document.pages:
+        raise DocumentReadError(
+            f"Документ «{os.path.basename(path)}» не содержит страниц "
+            f"и не может считаться успешно загруженным"
+        )
+    return document
