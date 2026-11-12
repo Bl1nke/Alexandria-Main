@@ -1402,6 +1402,18 @@ button { -webkit-tap-highlight-color: transparent; }
 [data-theme="dark"] .activity-month b,
 [data-theme="dark"] .activity-legend { color: var(--text-muted); }
 [data-theme="dark"] .activity-month i { background: #1f2b3d; }
+/* Уровни активности в тёмной теме. Общее правило [data-theme="dark"] .activity-month i
+   имеет ту же специфичность, что и светлые .level-1/2/3 (style.css выше), но идёт позже
+   по файлу, поэтому без этих строк все клетки получали один фон и рисунок активности
+   пропадал. Шкала «чем выше активность — тем ярче»: тёмно-синие оттенки светлой
+   палитры на фоне панели (--surface) были бы неразличимы. */
+[data-theme="dark"] .activity-month i.level-1 { background: #2b4a78; }
+[data-theme="dark"] .activity-month i.level-2 { background: #3f7bd0; }
+[data-theme="dark"] .activity-month i.level-3 { background: var(--accent-strong); }
+/* Легенда повторяет ту же шкалу, иначе её яркие кружки противоречили бы сетке. */
+[data-theme="dark"] .activity-legend .high { background: var(--accent-strong); }
+[data-theme="dark"] .activity-legend .medium { background: #3f7bd0; }
+[data-theme="dark"] .activity-legend .low { background: #2b4a78; }
 [data-theme="dark"] .stat-card { border-color: var(--border); }
 [data-theme="dark"] .stat-icon { background: var(--accent-soft); color: var(--accent); }
 [data-theme="dark"] .stat-card p,
