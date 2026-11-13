@@ -342,3 +342,179 @@ def corrupted_docx(tmp_path) -> str:
     path.write_bytes(b"PK\x03\x04garbagegarbage")
     return str(path)
 
+
+# ─── Макет: фикстуры (Этап 3) ────────────────────────────────
+
+
+@pytest.fixture
+def single_column_pdf(tmp_path) -> str:
+    """Одноколоночная страница."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    for index in range(6):
+        page.insert_text((72, 80 + index * 18), f"Single column body line number {index}", fontsize=11)
+    path = tmp_path / "single_column.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def two_column_layout_pdf(tmp_path) -> str:
+    """Две колонки с общими базовыми линиями."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    for index in range(4):
+        page.insert_text((60, 80 + index * 18), f"Left column body line {index}", fontsize=11)
+        page.insert_text((330, 80 + index * 18), f"Right column body line {index}", fontsize=11)
+    path = tmp_path / "two_column_layout.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def three_column_pdf(tmp_path) -> str:
+    """Три колонки."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    for index in range(4):
+        for col, x in enumerate((40, 220, 400)):
+            page.insert_text((x, 80 + index * 18), f"Col{col} line {index}", fontsize=11)
+    path = tmp_path / "three_column.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def mixed_layout_pdf(tmp_path) -> str:
+    """Смешанный макет: полноширинный заголовок и две колонки."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text(
+        (60, 60), "FULL WIDTH HEADING ACROSS THE TOP OF THE PAGE", fontsize=14, fontname="hebo"
+    )
+    for index in range(4):
+        page.insert_text((60, 130 + index * 18), f"Left paragraph line {index}", fontsize=11)
+        page.insert_text((330, 130 + index * 18), f"Right paragraph line {index}", fontsize=11)
+    path = tmp_path / "mixed_layout.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def full_width_heading_pdf(tmp_path) -> str:
+    """Полноширинный заголовок над одноколоночным текстом."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 70), "Centered Big Heading", fontsize=20, fontname="hebo")
+    for index in range(5):
+        page.insert_text((72, 110 + index * 18), f"Body paragraph line {index}", fontsize=11)
+    path = tmp_path / "full_width_heading.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def table_between_text_pdf(tmp_path) -> str:
+    """Таблица между двумя текстовыми блоками."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 70), "Text before the table here.", fontsize=11)
+    xs = [72.0, 200.0, 280.0]
+    ys = [110.0, 140.0, 170.0]
+    for x in xs:
+        page.draw_line((x, ys[0]), (x, ys[-1]))
+    for y in ys:
+        page.draw_line((xs[0], y), (xs[-1], y))
+    for row_index, row in enumerate((("A", "B"), ("1", "2"))):
+        for col_index, value in enumerate(row):
+            page.insert_text((xs[col_index] + 4, ys[row_index] + 20), value, fontsize=11)
+    page.insert_text((72, 220), "Text after the table here.", fontsize=11)
+    path = tmp_path / "table_between.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def image_with_caption_pdf(tmp_path) -> str:
+    """Изображение с подписью под ним."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 70), "Figure introduction paragraph.", fontsize=11)
+    page.insert_image(pymupdf.Rect(72, 100, 260, 220), stream=_make_png_bytes(120, 80))
+    page.insert_text((72, 240), "Рис. 1. Sample caption for the image", fontsize=10)
+    path = tmp_path / "image_caption.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def typography_pdf(tmp_path) -> str:
+    """Разные размеры и начертания шрифта, нумерованный список."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 70), "Document Title Heading", fontsize=20, fontname="hebo")
+    page.insert_text((72, 110), "Regular paragraph sentence goes here.", fontsize=11)
+    page.insert_text((72, 140), "1) first numbered item", fontsize=11)
+    page.insert_text((72, 160), "2) second numbered item", fontsize=11)
+    path = tmp_path / "typography.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def header_footer_pdf(tmp_path) -> str:
+    """Несколько страниц с повторяющимся верхним и нижним колонтитулом."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    for index in range(3):
+        page = doc.new_page(width=595, height=842)
+        page.insert_text((72, 20), "Running Header Text", fontsize=9)
+        page.insert_text((72, 120 + index), f"Body content page line {index}", fontsize=11)
+        page.insert_text((72, 820), "Page Footer Text", fontsize=9)
+    path = tmp_path / "header_footer.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+
+@pytest.fixture
+def continuation_pdf(tmp_path) -> str:
+    """Абзац, продолжающийся на следующей странице."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    page1 = doc.new_page(width=595, height=842)
+    page1.insert_text((72, 80), "This paragraph is cut off in the middle of the", fontsize=11)
+    page2 = doc.new_page(width=595, height=842)
+    page2.insert_text((72, 80), "sentence and continues here on the next page.", fontsize=11)
+    path = tmp_path / "continuation.pdf"
+    doc.save(str(path))
+    doc.close()
+    return str(path)
+
+

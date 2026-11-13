@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Iterator, List, Optional
 
+from models.layout import Column, PageLayout
 from models.validation import Confidence
 
 # "pdf" | "docx"; набор поддерживаемых значений — в config/parser_settings.py
@@ -65,6 +66,11 @@ class TextBlock:
     is_italic: bool = False
     source: str = ""
     extraction_index: Optional[int] = None
+    # Результаты анализа макета (Этап 3) — добавляются, не заменяя исходные поля.
+    column: Optional[int] = None
+    alignment: Optional[str] = None
+    caption_for: Optional[str] = None
+    origin_index: Optional[int] = None
 
     def to_dict(self) -> Dict[str, object]:
         """Сериализует блок в словарь."""
@@ -82,6 +88,10 @@ class TextBlock:
             "source": self.source,
             "order": self.order,
             "extraction_index": self.extraction_index,
+            "column": self.column,
+            "alignment": self.alignment,
+            "caption_for": self.caption_for,
+            "origin_index": self.origin_index,
         }
 
 
@@ -104,6 +114,10 @@ class ImageRef:
     format: Optional[str] = None
     width: Optional[int] = None
     height: Optional[int] = None
+    # Результаты анализа макета (Этап 3).
+    column: Optional[int] = None
+    full_width: Optional[bool] = None
+    caption_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, object]:
         """Сериализует метаданные изображения (без бинарных данных)."""
@@ -117,6 +131,9 @@ class ImageRef:
             "width": self.width,
             "height": self.height,
             "has_data": self.data is not None,
+            "column": self.column,
+            "full_width": self.full_width,
+            "caption_id": self.caption_id,
         }
 
 
@@ -157,6 +174,10 @@ class Table:
     rows: List[List[TableCell]] = field(default_factory=list)
     order: Optional[int] = None
     source: str = ""
+    # Результаты анализа макета (Этап 3).
+    column: Optional[int] = None
+    full_width: Optional[bool] = None
+    caption_id: Optional[str] = None
 
     @property
     def n_rows(self) -> int:
@@ -182,6 +203,9 @@ class Table:
             "n_cols": self.n_cols,
             "order": self.order,
             "source": self.source,
+            "column": self.column,
+            "full_width": self.full_width,
+            "caption_id": self.caption_id,
             "rows": [[cell.to_dict() for cell in row] for row in self.rows],
         }
 
@@ -197,6 +221,8 @@ class Page:
     images: List[ImageRef] = field(default_factory=list)
     tables: List[Table] = field(default_factory=list)
     needs_ocr: bool = False
+    # Результат анализа макета страницы (Этап 3).
+    layout: Optional[PageLayout] = None
 
     @property
     def has_text(self) -> bool:
@@ -213,6 +239,11 @@ class Page:
         """Количество текстовых блоков на странице."""
         return len(self.blocks)
 
+    @property
+    def column_count(self) -> Optional[int]:
+        """Число колонок страницы (из анализа макета), либо ``None``."""
+        return self.layout.column_count if self.layout else None
+
     def text(self) -> str:
         """Текст страницы, собранный из блоков в их текущем порядке."""
         return "\n".join(block.text for block in self.blocks)
@@ -226,6 +257,7 @@ class Page:
             "block_count": self.block_count,
             "has_images": self.has_images,
             "needs_ocr": self.needs_ocr,
+            "layout": self.layout.to_dict() if self.layout else None,
             "blocks": [block.to_dict() for block in self.blocks],
             "images": [image.to_dict() for image in self.images],
             "tables": [table.to_dict() for table in self.tables],
